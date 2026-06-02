@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { Trophy, Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Loader2 } from 'lucide-react';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -39,8 +39,8 @@ export default function Register() {
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-8">
-          <div className="bg-emerald-500/10 p-4 rounded-full inline-block mb-4 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-            <Trophy className="w-10 h-10 text-emerald-400" />
+          <div className="bg-emerald-500/10 p-4 rounded-full inline-block mb-4 border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.3)] flex justify-center items-center">
+            <img src="/favicon.svg" alt="Logo Mundial 2026" className="w-12 h-12 object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Únete a la <span className="text-emerald-400">Quiniela</span></h1>
           <p className="text-slate-400 mt-2">Crea tu cuenta y empieza a predecir</p>

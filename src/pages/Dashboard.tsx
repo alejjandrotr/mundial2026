@@ -53,8 +53,8 @@ export default function Dashboard() {
         {/* Top brand line */}
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-worldcup-gradient rounded-t-2xl" />
         <div className="flex items-center gap-3">
-          <div className="bg-worldcup-purple/20 p-2.5 rounded-xl border border-worldcup-purple/30">
-            <Trophy className="w-5.5 h-5.5 text-worldcup-green font-bold drop-shadow-[0_0_6px_rgba(0,245,118,0.4)]" />
+          <div className="bg-worldcup-purple/20 p-2 rounded-xl border border-worldcup-purple/30">
+            <img src="/favicon.svg" alt="Logo Mundial 2026" className="w-6 h-6 object-contain" />
           </div>
           <h1 className="text-lg md:text-xl font-black tracking-tight">
             Quiniela <span className="text-worldcup-green font-black">Mundial 2026</span>

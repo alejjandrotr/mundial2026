@@ -1,36 +1,59 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
-    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#7209b7" />
-      <stop offset="50%" stop-color="#f72585" />
-      <stop offset="100%" stop-color="#00f576" />
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090a0f"/>
+      <stop offset="100%" stop-color="#151b29"/>
     </linearGradient>
-    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="10" result="blur" />
+
+    <!-- World Cup 2026 Brand Colors -->
+    <linearGradient id="wcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" /> <!-- Violet -->
+      <stop offset="40%" stop-color="#f43f5e" /> <!-- Rose -->
+      <stop offset="100%" stop-color="#10b981" /> <!-- Emerald -->
+    </linearGradient>
+
+    <!-- Emerald Glow -->
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+
+    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="15" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
   </defs>
-  <!-- Background Circle with border -->
-  <circle cx="256" cy="256" r="230" fill="#090d16" stroke="url(#grad)" stroke-width="16" />
-  
-  <!-- Glowing Trophy Design -->
-  <g filter="url(#glow)">
-    <!-- Trophy main cup -->
-    <path d="M190,160 L322,160 L322,230 C322,280 290,310 256,310 C222,310 190,280 190,230 Z" fill="url(#grad)" />
+
+  <!-- Background base for the logo to pop against any background -->
+  <rect width="512" height="512" rx="120" fill="url(#bgGrad)" />
+  <rect width="512" height="512" rx="120" fill="none" stroke="url(#wcGrad)" stroke-width="4" opacity="0.3" />
+
+  <g transform="translate(256, 256)">
+    <!-- Abstract 2 -->
+    <path d="M -80 -120 C -20 -150 50 -150 90 -100 C 130 -50 100 0 50 30 C 0 60 -50 90 -80 150 L 120 150" 
+          fill="none" stroke="url(#wcGrad)" stroke-width="45" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)"/>
+    <path d="M -80 -120 C -20 -150 50 -150 90 -100 C 130 -50 100 0 50 30 C 0 60 -50 90 -80 150 L 120 150" 
+          fill="none" stroke="#fff" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
     
-    <!-- Trophy base connection -->
-    <path d="M256,310 L256,370" stroke="url(#grad)" stroke-width="18" stroke-linecap="round" />
+    <!-- Abstract 6 interlocking -->
+    <path d="M 60 -30 C 0 -100 -120 -100 -120 20 C -120 100 -50 160 20 150 C 90 140 100 60 40 40 C -20 20 -80 80 -40 120" 
+          fill="none" stroke="url(#wcGrad)" stroke-width="45" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow)" opacity="0.8"/>
+    <path d="M 60 -30 C 0 -100 -120 -100 -120 20 C -120 100 -50 160 20 150 C 90 140 100 60 40 40 C -20 20 -80 80 -40 120" 
+          fill="none" stroke="#fff" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+          
+    <!-- Core glowing ball / Trophy accent -->
+    <circle cx="0" cy="-30" r="30" fill="url(#emeraldGrad)" filter="url(#glow)"/>
+    <circle cx="0" cy="-30" r="15" fill="#ffffff" />
     
-    <!-- Trophy base pedestal -->
-    <path d="M200,370 L312,370" stroke="url(#grad)" stroke-width="24" stroke-linecap="round" />
-    
-    <!-- Left Handle -->
-    <path d="M190,180 C150,180 150,230 190,240" fill="none" stroke="url(#grad)" stroke-width="10" stroke-linecap="round" />
-    
-    <!-- Right Handle -->
-    <path d="M322,180 C362,180 362,230 322,240" fill="none" stroke="url(#grad)" stroke-width="10" stroke-linecap="round" />
-    
-    <!-- Shiny Stars -->
-    <path d="M256,190 L260,202 L272,203 L263,211 L265,223 L256,216 L247,223 L249,211 L240,203 L252,202 Z" fill="#00f576" />
+    <!-- Stars -->
+    <path d="M 140 -120 l 8 20 l 20 5 l -15 15 l 5 20 l -18 -12 l -18 12 l 5 -20 l -15 -15 l 20 -5 z" fill="#10b981" filter="url(#softGlow)"/>
+    <path d="M -150 0 l 5 12 l 12 3 l -10 10 l 3 12 l -10 -8 l -10 8 l 3 -12 l -10 -10 l 12 -3 z" fill="#f43f5e" filter="url(#softGlow)"/>
+    <path d="M -120 -140 l 4 10 l 10 2 l -8 8 l 2 10 l -8 -6 l -8 6 l 2 -10 l -8 -8 l 10 -2 z" fill="#8b5cf6" filter="url(#softGlow)"/>
   </g>
 </svg>
