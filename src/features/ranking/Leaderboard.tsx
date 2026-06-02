@@ -14,7 +14,7 @@ export default function Leaderboard() {
     let text = `🏆 *Tabla de Posiciones - Quiniela Mundial 2026* 🏆\n\n`;
     users.slice(0, 10).forEach((user, idx) => {
       const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
-      text += `${medal} *${user.displayName}* - ${user.totalPoints} pts\n`;
+      text += `${medal} *${user.displayName.trim()}* - ${user.totalPoints} pts\n`;
     });
     
     text += `\n¡Sigue y simula tus resultados aquí!\n${window.location.origin}`;
