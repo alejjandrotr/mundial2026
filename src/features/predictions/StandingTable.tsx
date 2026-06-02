@@ -1,5 +1,6 @@
 import type { CalculatedTeam } from './QuinielaForm';
 import { Star } from 'lucide-react';
+import { getFlagUrl } from '../../utils/flags';
 
 interface StandingTableProps {
   groupName: string;
@@ -63,6 +64,9 @@ export default function StandingTable({ groupName, teams }: StandingTableProps) 
                   </td>
                   <td className="py-2.5 px-3 font-semibold text-slate-200">
                     <div className="flex items-center gap-2">
+                      {getFlagUrl(team.name) && (
+                        <img src={getFlagUrl(team.name)} alt="" className="w-4.5 h-3 object-cover rounded border border-slate-700/50 flex-shrink-0" />
+                      )}
                       <span className={qualifies ? 'text-white' : 'text-slate-300'}>
                         {team.name}
                       </span>

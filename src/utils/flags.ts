@@ -1,0 +1,56 @@
+const flagCodes: Record<string, string> = {
+  "Alemania": "de",
+  "Arabia Saudita": "sa",
+  "Argelia": "dz",
+  "Argentina": "ar",
+  "Australia": "au",
+  "Austria": "at",
+  "Bélgica": "be",
+  "Bosnia y Herzegovina": "ba",
+  "Brasil": "br",
+  "Cabo Verde": "cv",
+  "Canadá": "ca",
+  "Catar": "qa",
+  "Chequia": "cz",
+  "Colombia": "co",
+  "Congo (Rep. Dem.)": "cd",
+  "Corea del Sur": "kr",
+  "Costa de Marfil": "ci",
+  "Croacia": "hr",
+  "Curazao": "cw",
+  "Ecuador": "ec",
+  "Egipto": "eg",
+  "Escocia": "gb-sct",
+  "España": "es",
+  "Estados Unidos": "us",
+  "Francia": "fr",
+  "Ghana": "gh",
+  "Haití": "ht",
+  "Inglaterra": "gb-eng",
+  "Irak": "iq",
+  "Irán": "ir",
+  "Japón": "jp",
+  "Jordania": "jo",
+  "Marruecos": "ma",
+  "México": "mx",
+  "Noruega": "no",
+  "Nueva Zelanda": "nz",
+  "Países Bajos": "nl",
+  "Panamá": "pa",
+  "Paraguay": "py",
+  "Portugal": "pt",
+  "Senegal": "sn",
+  "Sudáfrica": "za",
+  "Suecia": "se",
+  "Suiza": "ch",
+  "Túnez": "tn",
+  "Turquía": "tr",
+  "Uzbekistán": "uz"
+};
+
+export function getFlagUrl(teamName: string): string {
+  const code = flagCodes[teamName.trim()];
+  if (!code) return "";
+  // Return the flagcdn w40 image URL
+  return `https://flagcdn.com/w40/${code}.png`;
+}

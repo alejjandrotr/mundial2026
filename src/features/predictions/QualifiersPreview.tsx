@@ -1,4 +1,5 @@
 import { Trophy, ShieldAlert, Star } from 'lucide-react';
+import { getFlagUrl } from '../../utils/flags';
 
 interface GroupQualifiers {
   first: string;
@@ -37,6 +38,8 @@ export default function QualifiersPreview({ qualifiers }: QualifiersPreviewProps
           const q = qualifiers[group] || { first: '', second: '' };
           const hasFirst = !!q.first;
           const hasSecond = !!q.second;
+          const flagUrl1 = hasFirst ? getFlagUrl(q.first) : '';
+          const flagUrl2 = hasSecond ? getFlagUrl(q.second) : '';
 
           return (
             <div
@@ -57,7 +60,10 @@ export default function QualifiersPreview({ qualifiers }: QualifiersPreviewProps
                   }`}
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-[10px] text-yellow-500/60 font-mono">1º</span>
+                    <span className="text-[10px] text-yellow-500/60 font-mono flex-shrink-0">1º</span>
+                    {flagUrl1 && (
+                      <img src={flagUrl1} alt="" className="w-4 h-3 object-cover rounded border border-yellow-500/10 flex-shrink-0" />
+                    )}
                     <span className="truncate">{hasFirst ? q.first : 'Por definir'}</span>
                   </div>
                   {hasFirst && <Star className="w-3 h-3 fill-yellow-500 text-yellow-500 flex-shrink-0" />}
@@ -72,7 +78,10 @@ export default function QualifiersPreview({ qualifiers }: QualifiersPreviewProps
                   }`}
                 >
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-[10px] text-emerald-500/60 font-mono">2º</span>
+                    <span className="text-[10px] text-emerald-500/60 font-mono flex-shrink-0">2º</span>
+                    {flagUrl2 && (
+                      <img src={flagUrl2} alt="" className="w-4 h-3 object-cover rounded border border-emerald-500/10 flex-shrink-0" />
+                    )}
                     <span className="truncate">{hasSecond ? q.second : 'Por definir'}</span>
                   </div>
                   {hasSecond && <Star className="w-3 h-3 fill-emerald-500 text-emerald-400 flex-shrink-0" />}

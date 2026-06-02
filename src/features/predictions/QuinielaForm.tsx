@@ -8,6 +8,7 @@ import QualifiersPreview from './QualifiersPreview';
 import { calculateMatchPoints } from '../../utils/scoring';
 import { getCachedMatches, clearPredictionsCache } from '../../utils/cache';
 import { Save, Loader2, CheckCircle2, AlertTriangle, RefreshCw, Star, Info, Trash2, Lock } from 'lucide-react';
+import { getFlagUrl } from '../../utils/flags';
 
 export interface CalculatedTeam {
   name: string;
@@ -408,8 +409,11 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
                     {/* Marcador e Inputs */}
                     <div className="flex items-center justify-center gap-3 sm:gap-6 flex-1 w-full order-1">
                       {/* Equipo Local */}
-                      <div className="flex-1 text-right font-bold text-sm sm:text-base text-slate-100 truncate">
-                        {match.homeTeam}
+                      <div className="flex-1 flex items-center justify-end gap-2 font-bold text-sm sm:text-base text-slate-100 truncate">
+                        <span>{match.homeTeam}</span>
+                        {getFlagUrl(match.homeTeam) && (
+                          <img src={getFlagUrl(match.homeTeam)} alt="" className="w-5 h-3.5 object-cover rounded border border-slate-700/50 flex-shrink-0" />
+                        )}
                       </div>
 
                       {/* Inputs de Predicción */}
@@ -429,7 +433,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
                           } disabled:opacity-50 disabled:cursor-not-allowed`}
                           placeholder="-"
                         />
-                        <span className="text-slate-600 font-bold text-sm select-none">vs</span>
+                        <span className="text-slate-650 font-bold text-sm select-none">vs</span>
                         <input
                           type="text"
                           inputMode="numeric"
@@ -448,8 +452,11 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
                       </div>
 
                       {/* Equipo Visitante */}
-                      <div className="flex-1 text-left font-bold text-sm sm:text-base text-slate-100 truncate">
-                        {match.awayTeam}
+                      <div className="flex-1 flex items-center justify-start gap-2 font-bold text-sm sm:text-base text-slate-100 truncate">
+                        {getFlagUrl(match.awayTeam) && (
+                          <img src={getFlagUrl(match.awayTeam)} alt="" className="w-5 h-3.5 object-cover rounded border border-slate-700/50 flex-shrink-0" />
+                        )}
+                        <span>{match.awayTeam}</span>
                       </div>
                     </div>
                   </div>

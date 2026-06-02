@@ -3,6 +3,7 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { Partido } from '../../models/types';
 import { CalendarDays, Clock, PlayCircle, CheckCircle2 } from 'lucide-react';
+import { getFlagUrl } from '../../utils/flags';
 
 interface MatchListProps {
   onPredictClick?: (groupName: string) => void;
@@ -80,14 +81,17 @@ export default function MatchList({ onPredictClick }: MatchListProps) {
           </div>
 
           {/* Teams and Score */}
-          <div className="flex items-center justify-between">
-            <div className="flex-1 text-center">
-              <div className="text-3xl font-black text-white tracking-wider">{match.homeTeam}</div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1 flex flex-col items-center gap-2 text-center">
+              {getFlagUrl(match.homeTeam) && (
+                <img src={getFlagUrl(match.homeTeam)} alt="" className="w-12 h-9 object-cover rounded-lg border border-slate-700/60 shadow-md flex-shrink-0" />
+              )}
+              <div className="text-sm md:text-base font-extrabold text-white tracking-wide truncate max-w-[120px] sm:max-w-none">{match.homeTeam}</div>
             </div>
             
-            <div className="px-6 flex items-center justify-center">
+            <div className="px-4 flex items-center justify-center">
               {match.status === 'pending' ? (
-                <div className="text-slate-500 font-black text-xl">VS</div>
+                <div className="text-slate-500 font-bold text-sm bg-slate-900/60 border border-slate-700/40 px-3 py-1 rounded-full font-mono tracking-wider">VS</div>
               ) : (
                 <div className="flex items-center gap-3 text-3xl font-black text-white">
                   <span className={match.homeGoals! > match.awayGoals! ? 'text-emerald-400' : ''}>{match.homeGoals}</span>
@@ -97,8 +101,11 @@ export default function MatchList({ onPredictClick }: MatchListProps) {
               )}
             </div>
 
-            <div className="flex-1 text-center">
-              <div className="text-3xl font-black text-white tracking-wider">{match.awayTeam}</div>
+            <div className="flex-1 flex flex-col items-center gap-2 text-center">
+              {getFlagUrl(match.awayTeam) && (
+                <img src={getFlagUrl(match.awayTeam)} alt="" className="w-12 h-9 object-cover rounded-lg border border-slate-700/60 shadow-md flex-shrink-0" />
+              )}
+              <div className="text-sm md:text-base font-extrabold text-white tracking-wide truncate max-w-[120px] sm:max-w-none">{match.awayTeam}</div>
             </div>
           </div>
           

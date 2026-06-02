@@ -4,6 +4,8 @@ import { calculateMatchPoints } from '../../utils/scoring';
 import { getCachedMatches, getCachedUsers, getCachedPredictions } from '../../utils/cache';
 import { Loader2, HelpCircle, Undo, Trophy, Medal, ArrowUp, ArrowDown, Minus, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { getFlagUrl } from '../../utils/flags';
+
 
 interface SimulatedMatchState {
   id: string;
@@ -258,11 +260,21 @@ export default function WhatIfSimulator() {
                       <tr key={match.id} className="hover:bg-slate-800/10 transition-colors">
                         {/* Match Name Column */}
                         <td className="py-3 px-4 font-bold text-slate-200 sticky left-0 bg-slate-900/90 shadow-[2px_0_5px_rgba(0,0,0,0.25)] flex items-center gap-2 justify-between z-10">
-                          <div className="truncate pr-2">
-                            <span className="bg-slate-850 border border-slate-700/50 text-slate-400 text-[10px] font-mono px-1.5 py-0.5 rounded mr-2 uppercase">
+                          <div className="truncate pr-2 flex items-center gap-1">
+                            <span className="bg-slate-850 border border-slate-700/50 text-slate-400 text-[10px] font-mono px-1.5 py-0.5 rounded mr-1 uppercase">
                               G{match.group}
                             </span>
-                            <span>{match.homeTeam} vs {match.awayTeam}</span>
+                            <span className="inline-flex items-center gap-1.5">
+                              {getFlagUrl(match.homeTeam) && (
+                                <img src={getFlagUrl(match.homeTeam)} alt="" className="w-4 h-3 object-cover rounded border border-slate-700/50 flex-shrink-0" />
+                              )}
+                              <span>{match.homeTeam}</span>
+                              <span className="text-slate-500 text-[10px] font-normal">vs</span>
+                              {getFlagUrl(match.awayTeam) && (
+                                <img src={getFlagUrl(match.awayTeam)} alt="" className="w-4 h-3 object-cover rounded border border-slate-700/50 flex-shrink-0" />
+                              )}
+                              <span>{match.awayTeam}</span>
+                            </span>
                           </div>
                         </td>
 
