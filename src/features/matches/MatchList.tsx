@@ -4,6 +4,8 @@ import { db } from '../../config/firebase';
 import type { Partido } from '../../models/types';
 import { CalendarDays, Clock, PlayCircle, CheckCircle2 } from 'lucide-react';
 import { getFlagUrl } from '../../utils/flags';
+import { getMatchVenue } from '../../utils/venues';
+
 
 interface MatchListProps {
   onPredictClick?: (groupName: string) => void;
@@ -55,30 +57,40 @@ export default function MatchList({ onPredictClick }: MatchListProps) {
         <h2 className="text-lg font-bold text-white">Próximos Partidos</h2>
       </div>
 
-      {matches.map((match) => (
-        <div key={match.id} className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 backdrop-blur-sm hover:border-slate-600/50 transition-colors">
-          
-          {/* Status Bar */}
-          <div className="flex justify-between items-center mb-4 text-xs font-medium uppercase tracking-wider">
-            {match.status === 'pending' && (
-              <div className="flex items-center gap-1.5 text-slate-400">
-                <Clock className="w-3.5 h-3.5" />
-                <span>{isToday(match.kickoffTime) ? 'Hoy' : match.kickoffTime.toLocaleDateString([], { day: '2-digit', month: 'short' })}, {formatTime(match.kickoffTime)}</span>
+      {matches.map((match) => {
+        const venue = getMatchVenue(match.group || 'A', match.homeTeam);
+        return (
+          <div key={match.id} className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 backdrop-blur-sm hover:border-slate-600/50 transition-colors">
+            
+            {/* Status Bar */}
+            <div className="flex justify-between items-center mb-4 text-xs font-medium uppercase tracking-wider gap-2">
+              <div className="flex items-center gap-4">
+                {match.status === 'pending' && (
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>{isToday(match.kickoffTime) ? 'Hoy' : match.kickoffTime.toLocaleDateString([], { day: '2-digit', month: 'short' })}, {formatTime(match.kickoffTime)}</span>
+                  </div>
+                )}
+                {match.status === 'in_progress' && (
+                  <div className="flex items-center gap-1.5 text-red-400 animate-pulse">
+                    <PlayCircle className="w-3.5 h-3.5" />
+                    <span>En Vivo</span>
+                  </div>
+                )}
+                {match.status === 'finished' && (
+                  <div className="flex items-center gap-1.5 text-emerald-400">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Finalizado</span>
+                  </div>
+                )}
               </div>
-            )}
-            {match.status === 'in_progress' && (
-              <div className="flex items-center gap-1.5 text-red-400 animate-pulse">
-                <PlayCircle className="w-3.5 h-3.5" />
-                <span>En Vivo</span>
+
+              {/* Venue Badge */}
+              <div className="flex items-center gap-1 text-[10px] text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded border border-slate-800">
+                <span>{venue.flag}</span>
+                <span className="font-semibold text-slate-300 font-sans normal-case">{venue.city}, {venue.country}</span>
               </div>
-            )}
-            {match.status === 'finished' && (
-              <div className="flex items-center gap-1.5 text-emerald-400">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Finalizado</span>
-              </div>
-            )}
-          </div>
+            </div>
 
           {/* Teams and Score */}
           <div className="flex items-center justify-between gap-2">
@@ -126,8 +138,9 @@ export default function MatchList({ onPredictClick }: MatchListProps) {
             )}
           </div>
 
-        </div>
-      ))}
+          </div>
+        );
+      })}
 
       {matches.length === 0 && (
         <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-8 text-center text-slate-400">

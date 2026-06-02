@@ -43,37 +43,47 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-4 md:p-6">
+    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-6 relative overflow-hidden">
+      {/* Background World Cup Aura Glows */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-worldcup-purple/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-worldcup-pink/5 blur-[150px] pointer-events-none" />
+
       {/* Encabezado */}
-      <header className="flex justify-between items-center max-w-7xl mx-auto bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 backdrop-blur-md mb-8">
+      <header className="flex justify-between items-center max-w-7xl mx-auto bg-slate-900/80 p-4 rounded-2xl border border-slate-800/80 backdrop-blur-md mb-8 relative shadow-lg">
+        {/* Top brand line */}
+        <div className="absolute top-0 left-0 right-0 h-[3px] bg-worldcup-gradient rounded-t-2xl" />
         <div className="flex items-center gap-3">
-          <div className="bg-emerald-500/10 p-2 rounded-xl">
-            <Trophy className="w-6 h-6 text-emerald-400 font-bold" />
+          <div className="bg-worldcup-purple/20 p-2.5 rounded-xl border border-worldcup-purple/30">
+            <Trophy className="w-5.5 h-5.5 text-worldcup-green font-bold drop-shadow-[0_0_6px_rgba(0,245,118,0.4)]" />
           </div>
-          <h1 className="text-xl font-bold">Quiniela <span className="text-emerald-400">Pro</span></h1>
+          <h1 className="text-lg md:text-xl font-black tracking-tight">
+            Quiniela <span className="text-worldcup-green font-black">Mundial 2026</span>
+          </h1>
         </div>
         
         <div className="flex items-center gap-4">
-          <span className="text-slate-300 font-medium hidden sm:inline">Hola, {currentUser?.displayName || 'Jugador'}</span>
+          <span className="text-slate-300 text-xs font-semibold hidden sm:inline bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-850">
+            👤 {currentUser?.displayName || 'Jugador'}
+          </span>
           <button 
             onClick={logout}
-            className="flex items-center gap-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 px-4 py-2 rounded-lg transition-colors font-medium text-sm border border-red-500/20"
+            className="flex items-center gap-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 px-3.5 py-1.5 rounded-xl transition-all font-bold text-xs border border-red-500/20 active:scale-95"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-3.5 h-3.5" />
             Salir
           </button>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto">
+      <main className="max-w-7xl mx-auto relative">
         {/* Selector de Pestañas Principal */}
-        <div className="flex bg-slate-800/40 border border-slate-700/50 p-1.5 rounded-2xl backdrop-blur-sm max-w-xl mb-8 gap-1">
+        <div className="flex bg-slate-900/60 border border-slate-800/70 p-1.5 rounded-2xl backdrop-blur-md max-w-xl mb-8 gap-1 shadow-inner">
           <button
             onClick={() => setActiveTab('quiniela')}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
               activeTab === 'quiniela'
-                ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.35)]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/30'
+                ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
             }`}
           >
             <Gamepad2 className="w-4 h-4" />
@@ -84,36 +94,36 @@ export default function Dashboard() {
             onClick={() => setActiveTab('comparison')}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
               activeTab === 'comparison'
-                ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.35)]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/30'
+                ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
             }`}
           >
             <Table className="w-4 h-4" />
-            Comparativa (Excel)
+            Comparativa
           </button>
 
           <button
             onClick={() => setActiveTab('live')}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
               activeTab === 'live'
-                ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.35)]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/30'
+                ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
             }`}
           >
             <Trophy className="w-4 h-4" />
-            Resultados del Mundial
+            Resultados
           </button>
 
           <button
             onClick={() => setActiveTab('admin')}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
               activeTab === 'admin'
-                ? 'bg-amber-500 text-slate-950 shadow-[0_0_15px_rgba(245,158,11,0.35)] font-black'
-                : 'text-amber-450 hover:text-amber-300 hover:bg-amber-500/5 border border-transparent hover:border-amber-500/10'
+                ? 'bg-worldcup-green text-slate-950 shadow-[0_0_15px_rgba(0,245,118,0.35)] font-black scale-[1.02]'
+                : 'text-worldcup-green hover:bg-worldcup-green/5 border border-transparent hover:border-worldcup-green/10'
             }`}
           >
             <Settings className="w-4 h-4" />
-            Admin (Cerrar Partidos)
+            Admin
           </button>
         </div>
 

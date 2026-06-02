@@ -5,6 +5,8 @@ import { getCachedMatches, getCachedUsers, getCachedPredictions } from '../../ut
 import { Loader2, HelpCircle, Undo, Trophy, Medal, ArrowUp, ArrowDown, Minus, Lock } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getFlagUrl } from '../../utils/flags';
+import { getMatchVenue } from '../../utils/venues';
+
 
 
 interface SimulatedMatchState {
@@ -261,8 +263,12 @@ export default function WhatIfSimulator() {
                         {/* Match Name Column */}
                         <td className="py-3 px-4 font-bold text-slate-200 sticky left-0 bg-slate-900/90 shadow-[2px_0_5px_rgba(0,0,0,0.25)] flex items-center gap-2 justify-between z-10">
                           <div className="truncate pr-2 flex items-center gap-1">
-                            <span className="bg-slate-850 border border-slate-700/50 text-slate-400 text-[10px] font-mono px-1.5 py-0.5 rounded mr-1 uppercase">
-                              G{match.group}
+                            <span 
+                              className="cursor-help bg-slate-850 border border-slate-700/50 text-slate-400 text-[10px] font-mono px-1.5 py-0.5 rounded mr-1 uppercase flex items-center gap-1"
+                              title={`Sede: ${getMatchVenue(match.group || 'A', match.homeTeam).city}, ${getMatchVenue(match.group || 'A', match.homeTeam).country}`}
+                            >
+                              <span>G{match.group}</span>
+                              <span>{getMatchVenue(match.group || 'A', match.homeTeam).flag}</span>
                             </span>
                             <span className="inline-flex items-center gap-1.5">
                               {getFlagUrl(match.homeTeam) && (

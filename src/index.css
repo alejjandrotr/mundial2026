@@ -1,1 +1,19 @@
 @import "tailwindcss";
+
+@theme {
+  --color-worldcup-green: #00f576;
+  --color-worldcup-purple: #7209b7;
+  --color-worldcup-pink: #f72585;
+  --color-worldcup-blue: #3f37c9;
+  --color-worldcup-teal: #4cc9f0;
+}
+
+@utility bg-worldcup-gradient {
+  background: linear-gradient(135deg, var(--color-worldcup-purple) 0%, var(--color-worldcup-pink) 50%, var(--color-worldcup-blue) 100%);
+}
+
+@utility text-worldcup-gradient {
+  background: linear-gradient(135deg, var(--color-worldcup-green) 0%, var(--color-worldcup-teal) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}

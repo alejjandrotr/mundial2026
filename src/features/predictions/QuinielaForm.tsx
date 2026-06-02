@@ -9,6 +9,8 @@ import { calculateMatchPoints } from '../../utils/scoring';
 import { getCachedMatches, clearPredictionsCache } from '../../utils/cache';
 import { Save, Loader2, CheckCircle2, AlertTriangle, RefreshCw, Star, Info, Trash2, Lock } from 'lucide-react';
 import { getFlagUrl } from '../../utils/flags';
+import { getMatchVenue } from '../../utils/venues';
+
 
 export interface CalculatedTeam {
   name: string;
@@ -380,11 +382,18 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
                 >
                   {/* Fila superior: Info, Estado y Puntajes */}
                   <div className="w-full flex justify-between items-center text-xs font-mono pb-2 border-b border-slate-800/60 text-slate-500">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-slate-400">
-                        {kickoffDate.toLocaleDateString([], { day: '2-digit', month: 'short' })}
-                      </span>
-                      <span>{kickoffDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold text-slate-400">
+                          {kickoffDate.toLocaleDateString([], { day: '2-digit', month: 'short' })}
+                        </span>
+                        <span>{kickoffDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <span className="text-slate-700">|</span>
+                      <div className="flex items-center gap-1 text-[10px] text-slate-400">
+                        <span>{getMatchVenue(match.group || 'A', match.homeTeam).flag}</span>
+                        <span className="font-medium text-slate-300">{getMatchVenue(match.group || 'A', match.homeTeam).city}</span>
+                      </div>
                     </div>
 
                     {/* Badge de Puntos Obtenidos */}
