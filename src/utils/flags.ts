@@ -45,6 +45,7 @@ const flagCodes: Record<string, string> = {
   "Suiza": "ch",
   "Túnez": "tn",
   "Turquía": "tr",
+  "Uruguay": "uy",
   "Uzbekistán": "uz"
 };
 
