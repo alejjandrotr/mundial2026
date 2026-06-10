@@ -24,7 +24,7 @@ export default function WhatIfSimulator() {
   const [loading, setLoading] = useState(true);
 
   const isBeforeRevealDate = useMemo(() => {
-    return new Date() < new Date('2026-06-10T11:00:00Z');
+    return new Date() < new Date('2026-06-11T14:40:00Z');
   }, []);
   const [matches, setMatches] = useState<Partido[]>([]);
   const [users, setUsers] = useState<Usuario[]>([]);
@@ -357,7 +357,7 @@ export default function WhatIfSimulator() {
 
                           if (isHidden) {
                             return (
-                              <td key={user.uid} className={cellClass} title="Oculto hasta el 10 de junio">
+                              <td key={user.uid} className={cellClass} title="Oculto hasta el 11 de junio">
                                 <div className="flex items-center justify-center text-slate-500 gap-1 bg-slate-950/[0.05] py-1.5 px-2 rounded-lg border border-slate-800/40">
                                   <Lock className="w-3.5 h-3.5 text-slate-500/80" />
                                   <span className="text-[10px] text-slate-500 font-semibold font-mono tracking-wide uppercase">Oculto</span>
