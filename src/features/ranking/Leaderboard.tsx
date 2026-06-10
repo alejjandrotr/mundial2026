@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { collection, query, orderBy, onSnapshot, getDocs, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { Usuario, Partido } from '../../models/types';
-import { Medal, Trophy, Share2, Calendar } from 'lucide-react';
+import { Medal, Trophy, Share2, Calendar, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 import { calculateMatchPoints } from '../../utils/scoring';
 
 export default function Leaderboard() {
   const [users, setUsers] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalMatches, setTotalMatches] = useState<number>(0);
+  const [predictionsCount, setPredictionsCount] = useState<Record<string, number>>({});
 
   const shareOnWhatsApp = () => {
     if (users.length === 0) return;
@@ -126,9 +128,16 @@ export default function Leaderboard() {
   };
 
   useEffect(() => {
+    // 1. Fetch total matches count once
+    getDocs(collection(db, 'partidos'))
+      .then((snapshot) => {
+        setTotalMatches(snapshot.size);
+      })
+      .catch((err) => console.error('Error fetching matches count:', err));
+
+    // 2. Listen to users
     const q = query(collection(db, 'usuarios'), orderBy('totalPoints', 'desc'));
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeUsers = onSnapshot(q, (snapshot) => {
       const usersData: Usuario[] = [];
       snapshot.forEach((doc) => {
         usersData.push(doc.data() as Usuario);
@@ -137,7 +146,25 @@ export default function Leaderboard() {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // 3. Listen to predictions to calculate completion counts
+    const unsubscribePreds = onSnapshot(collection(db, 'predicciones'), (snapshot) => {
+      const counts: Record<string, number> = {};
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        const homeG = data.homeGoals;
+        const awayG = data.awayGoals;
+        // Count as filled if both values are valid numbers or strings and not empty/null
+        if (homeG !== null && awayG !== null && homeG !== '' && awayG !== '') {
+          counts[data.usuarioId] = (counts[data.usuarioId] || 0) + 1;
+        }
+      });
+      setPredictionsCount(counts);
+    });
+
+    return () => {
+      unsubscribeUsers();
+      unsubscribePreds();
+    };
   }, []);
 
   if (loading) {
@@ -170,6 +197,33 @@ export default function Leaderboard() {
             rankIcon = <span className={`w-5 text-center font-mono text-sm ${rankColor}`}>{rank}</span>;
           }
 
+          const predCount = predictionsCount[user.uid] || 0;
+          let badge = null;
+          if (totalMatches > 0) {
+            if (predCount === 0) {
+              badge = (
+                <span className="inline-flex items-center gap-1 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-full" title="No ha llenado la quiniela">
+                  <AlertCircle className="w-3 h-3" />
+                  <span>0/{totalMatches}</span>
+                </span>
+              );
+            } else if (predCount < totalMatches) {
+              badge = (
+                <span className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-full" title="Quiniela parcialmente llena">
+                  <Clock className="w-3 h-3" />
+                  <span>{predCount}/{totalMatches}</span>
+                </span>
+              );
+            } else {
+              badge = (
+                <span className="inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full" title="Quiniela completa">
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Listo</span>
+                </span>
+              );
+            }
+          }
+
           return (
             <div key={user.uid} className={`flex items-center justify-between p-4 hover:bg-slate-700/20 transition-colors ${rank <= 3 ? 'bg-slate-800/20' : ''}`}>
               <div className="flex items-center gap-4">
@@ -177,9 +231,12 @@ export default function Leaderboard() {
                   {rankIcon}
                 </div>
                 <div className="flex flex-col">
-                  <span className={`text-base ${rank <= 3 ? 'text-white font-medium' : 'text-slate-200'}`}>
-                    {user.displayName}
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-base ${rank <= 3 ? 'text-white font-medium' : 'text-slate-200'}`}>
+                      {user.displayName}
+                    </span>
+                    {badge}
+                  </div>
                 </div>
               </div>
               <div className="flex items-baseline gap-1">
