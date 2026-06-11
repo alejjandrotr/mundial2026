@@ -52,6 +52,6 @@ const flagCodes: Record<string, string> = {
 export function getFlagUrl(teamName: string): string {
   const code = flagCodes[teamName.trim()];
   if (!code) return "";
-  // Return the flagcdn w40 image URL
-  return `https://flagcdn.com/w40/${code}.png`;
+  // Return the flagcdn svg image URL
+  return `https://flagcdn.com/${code}.svg`;
 }

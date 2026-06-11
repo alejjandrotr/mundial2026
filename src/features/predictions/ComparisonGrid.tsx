@@ -5,6 +5,7 @@ import { getCachedMatches, getCachedUsers, getCachedPredictions } from '../../ut
 import { Loader2, Table, ShieldAlert, RefreshCw, FlaskConical, Lock, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import MatchFlyerModal from './MatchFlyerModal';
 
 export function abbreviateTeam(name: string): string {
   const clean = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
@@ -89,6 +90,7 @@ export default function ComparisonGrid() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastLoaded, setLastLoaded] = useState<Date | null>(null);
   const [isPrintMode, setIsPrintMode] = useState(false);
+  const [selectedMatchForFlyer, setSelectedMatchForFlyer] = useState<Partido | null>(null);
   const navigate = useNavigate();
   const { currentUser } = useAuth();
 
@@ -133,7 +135,7 @@ export default function ComparisonGrid() {
 
   const isLockedForOthers = useMemo(() => {
     // Lock predictions for others until June 11, 2026 at 14:40:00 UTC (1h 20m before kickoff)
-    const lockTime = new Date('2026-06-11T14:40:00Z').getTime();
+    const lockTime = new Date('2026-06-11T16:45:00Z').getTime();
     return Date.now() < lockTime;
   }, []);
 
@@ -452,7 +454,11 @@ export default function ComparisonGrid() {
                     <tr key={match.id} className="hover:bg-slate-800/10 transition-colors">
                       {/* Match Name Column (Sticky left) */}
                       <td className="py-3 px-4 font-bold text-slate-200 sticky left-0 bg-slate-900/90 shadow-[2px_0_5px_rgba(0,0,0,0.25)] flex items-center gap-2 justify-between">
-                        <div className="truncate pr-2">
+                        <div 
+                          className="truncate pr-2 cursor-pointer hover:text-white transition-colors flex-1"
+                          onClick={() => setSelectedMatchForFlyer(match)}
+                          title="Ver resumen y batacazo del partido"
+                        >
                           <span className="bg-slate-800 border border-slate-700/50 text-slate-400 text-[10px] font-mono px-1.5 py-0.5 rounded mr-2 uppercase">
                             G{match.group}
                           </span>
@@ -558,6 +564,17 @@ export default function ComparisonGrid() {
             </table>
           </div>
         </div>
+      )}
+
+      {selectedMatchForFlyer && (
+        <MatchFlyerModal 
+          match={selectedMatchForFlyer}
+          users={sortedUsers}
+          predictions={predictions}
+          onClose={() => setSelectedMatchForFlyer(null)}
+          currentUserUid={currentUser?.uid}
+          isLockedForOthers={isLockedForOthers}
+        />
       )}
     </div>
   );

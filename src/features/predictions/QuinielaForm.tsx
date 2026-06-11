@@ -44,7 +44,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
 
   const isLocked = useMemo(() => {
     // Block editing on June 11, 2026 at 14:40:00 UTC (1h 20m before kickoff)
-    const lockTime = new Date('2026-06-11T14:40:00Z').getTime();
+    const lockTime = new Date('2026-06-11T16:45:00Z').getTime();
     return Date.now() >= lockTime;
   }, []);
 

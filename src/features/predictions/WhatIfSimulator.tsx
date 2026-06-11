@@ -24,7 +24,7 @@ export default function WhatIfSimulator() {
   const [loading, setLoading] = useState(true);
 
   const isBeforeRevealDate = useMemo(() => {
-    return new Date() < new Date('2026-06-11T14:40:00Z');
+    return new Date() < new Date('2026-06-11T16:45:00Z');
   }, []);
   const [matches, setMatches] = useState<Partido[]>([]);
   const [users, setUsers] = useState<Usuario[]>([]);
