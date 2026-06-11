@@ -7,13 +7,38 @@ import type { Usuario } from '../../models/types';
 
 export default function DangerZone() {
   const [users, setUsers] = useState<Usuario[]>([]);
+  const [usersWithoutPredictions, setUsersWithoutPredictions] = useState<Set<string>>(new Set());
   const [selectedUserToDelete, setSelectedUserToDelete] = useState<string>('');
   const [isDeletingUser, setIsDeletingUser] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   const loadUsers = async () => {
-    const usersData = await getCachedUsers();
-    setUsers(usersData);
+    try {
+      const usersData = await getCachedUsers(true); // Forzar carga limpia
+      
+      // Consultar todas las predicciones actuales para ver quién no ha subido nada
+      const predSnapshot = await getDocs(collection(db, 'predicciones'));
+      const activeUserIds = new Set<string>();
+      predSnapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.usuarioId) {
+          activeUserIds.add(data.usuarioId);
+        }
+      });
+
+      // Identificar usuarios sin predicciones
+      const noPreds = new Set<string>();
+      usersData.forEach(u => {
+        if (!activeUserIds.has(u.uid)) {
+          noPreds.add(u.uid);
+        }
+      });
+
+      setUsers(usersData);
+      setUsersWithoutPredictions(noPreds);
+    } catch (err) {
+      console.error("Error al cargar usuarios y predicciones:", err);
+    }
   };
 
   useEffect(() => {
@@ -113,7 +138,7 @@ export default function DangerZone() {
         
         <div className="space-y-2.5 bg-red-950/20 p-3 rounded-xl border border-red-900/20">
           <p className="text-[10px] text-red-300/80 leading-relaxed">
-            Selecciona un usuario para eliminar permanentemente su cuenta y <strong className="text-red-400">TODAS</strong> sus predicciones registradas. Útil si alguien llenó los datos incorrectamente.
+            Selecciona un usuario para eliminar permanentemente su cuenta y <strong className="text-red-400">TODAS</strong> sus predicciones registradas. Los marcados en <span className="text-red-400 font-bold">rojo con [SIN PREDICCIONES]</span> no han enviado ningún pronóstico.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-2">
@@ -123,11 +148,18 @@ export default function DangerZone() {
               className="flex-1 bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-2 py-1.5 text-[10px] font-semibold focus:outline-none focus:border-red-500 transition-colors"
             >
               <option value="">-- Seleccionar Usuario a Eliminar --</option>
-              {users.map((u) => (
-                <option key={u.uid} value={u.uid}>
-                  {u.displayName} ({u.email || 'Sin correo'})
-                </option>
-              ))}
+              {users.map((u) => {
+                const hasNoPreds = usersWithoutPredictions.has(u.uid);
+                return (
+                  <option 
+                    key={u.uid} 
+                    value={u.uid} 
+                    className={hasNoPreds ? "text-red-400 bg-red-950/30" : ""}
+                  >
+                    {u.displayName} {hasNoPreds ? "⚠️ [SIN PREDICCIONES]" : ""} ({u.email || 'Sin correo'})
+                  </option>
+                );
+              })}
             </select>
             
             <button

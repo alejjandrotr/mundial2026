@@ -20,10 +20,10 @@ interface MatchFlyerModalProps {
   isLockedForOthers: boolean;
 }
 
-export default function MatchFlyerModal({ 
-  match, 
-  users, 
-  predictions, 
+export default function MatchFlyerModal({
+  match,
+  users,
+  predictions,
   onClose,
   currentUserUid,
   isLockedForOthers
@@ -64,7 +64,7 @@ export default function MatchFlyerModal({
     let totalH = 0;
     let totalV = 0;
     let count = 0;
-    
+
     const validPreds: { user: Usuario, pred: PredictionData }[] = [];
 
     users.forEach(user => {
@@ -91,7 +91,7 @@ export default function MatchFlyerModal({
     let homeBet: typeof validPreds = [];
     let awayBet: typeof validPreds = [];
     let drawBet: typeof validPreds = [];
-    
+
     let maxDistance = -1;
     let batacazo: { user: Usuario, pred: PredictionData, distance: number } | null = null;
 
@@ -102,7 +102,7 @@ export default function MatchFlyerModal({
 
       // Cálculo de distancia euclidiana
       const distance = Math.sqrt(Math.pow(pred.homeGoals! - avgH, 2) + Math.pow(pred.awayGoals! - avgV, 2));
-      
+
       if (distance > maxDistance) {
         maxDistance = distance;
         batacazo = { user, pred, distance };
@@ -111,7 +111,7 @@ export default function MatchFlyerModal({
         const totalGoals = pred.homeGoals! + pred.awayGoals!;
         const currentBatacazoGoals = batacazo.pred.homeGoals! + batacazo.pred.awayGoals!;
         if (totalGoals > currentBatacazoGoals) {
-           batacazo = { user, pred, distance };
+          batacazo = { user, pred, distance };
         }
       }
     });
@@ -138,14 +138,14 @@ export default function MatchFlyerModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fadeIn">
       {/* Backdrop con blur */}
-      <div 
-        className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl transition-opacity" 
+      <div
+        className="absolute inset-0 bg-slate-950/80 backdrop-blur-xl transition-opacity"
         onClick={onClose}
       />
 
       {/* Contenedor principal del Flyer */}
       <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl overflow-hidden ring-1 ring-white/10">
-        
+
         {/* Glows de fondo decorativos */}
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/20 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-purple-500/20 blur-[120px] rounded-full pointer-events-none" />
@@ -160,11 +160,17 @@ export default function MatchFlyerModal({
               <h2 className="text-lg font-black text-white tracking-tight uppercase">
                 {abbreviateTeam(nameH)} <span className="text-slate-500 font-medium px-2">VS</span> {abbreviateTeam(nameV)}
               </h2>
-              <p className="text-xs text-slate-400">Resumen de Predicciones del Grupo {match.group}</p>
+              <div className="flex flex-wrap items-center gap-x-2 text-xs text-slate-450 font-mono mt-0.5">
+                <span>Grupo {match.group}</span>
+                <span className="text-slate-600">•</span>
+                <span>{new Date(match.kickoffTime).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
+                <span className="text-slate-600">•</span>
+                <span className="text-indigo-400 font-bold">{new Date(match.kickoffTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} HS</span>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={handleDownload}
               disabled={downloading}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-650 hover:bg-emerald-550 text-white text-xs font-bold rounded-full transition-all disabled:opacity-50 cursor-pointer"
@@ -173,7 +179,7 @@ export default function MatchFlyerModal({
               {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
               <span className="hidden sm:inline">Exportar Foto</span>
             </button>
-            <button 
+            <button
               onClick={onClose}
               className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full transition-all cursor-pointer"
             >
@@ -184,7 +190,7 @@ export default function MatchFlyerModal({
 
         {/* Contenido scrolleable / Capturable */}
         <div ref={flyerRef} className="relative z-10 flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 bg-slate-900">
-          
+
           {stats.validCount === 0 ? (
             <div className="py-20 flex flex-col items-center justify-center text-slate-500 gap-3">
               <ShieldAlert className="w-12 h-12 text-slate-600 mb-2" />
@@ -198,28 +204,28 @@ export default function MatchFlyerModal({
           ) : (
             <>
               {stats.batacazo && (
-                <div className="relative mx-auto max-w-lg bg-gradient-to-r from-orange-500/20 via-red-500/20 to-purple-500/20 p-0.5 rounded-2xl">
-                  <div className="bg-slate-900 rounded-xl p-3 flex items-center justify-between gap-4 backdrop-blur-xl">
+                <div className="relative mx-auto max-w-md bg-gradient-to-r from-orange-500/20 via-red-500/20 to-purple-500/20 p-0.5 rounded-2xl">
+                  <div className="bg-slate-900 rounded-xl px-4 py-3 flex items-center justify-between gap-3 backdrop-blur-xl">
                     <div className="flex-1">
-                      <div className="flex items-center gap-1.5 text-orange-400">
-                        <Flame className="w-4 h-4 animate-pulse" />
-                        <h3 className="text-xs font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
+                      <div className="flex items-center gap-1 text-orange-400">
+                        <Flame className="w-5 h-5 animate-pulse" />
+                        <h3 className="text-sm font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
                           El Batacazo
                         </h3>
                       </div>
-                      <p className="text-[10px] text-slate-450 mt-0.5">
+                      <p className="text-[10px] text-slate-450 mt-0.5 font-medium">
                         Promedio general: {stats.avgH.toFixed(1)} - {stats.avgV.toFixed(1)}
                       </p>
                     </div>
-                    
-                    <div className="flex items-center gap-3 bg-slate-950/60 px-4 py-2 rounded-xl border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]">
-                      <span className="text-xs font-black text-slate-200">
+
+                    <div className="flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-xl border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)] flex-shrink-0">
+                      <span className="text-xs font-black text-slate-100 tracking-tight">
                         {stats.batacazo.user.displayName}
                       </span>
-                      <div className="flex items-center gap-1.5 text-lg font-black font-mono">
-                        <span className="text-white">{stats.batacazo.pred.homeGoals}</span>
-                        <span className="text-slate-600">-</span>
-                        <span className="text-white">{stats.batacazo.pred.awayGoals}</span>
+                      <div className="flex items-center gap-1 text-xl font-black font-mono tracking-tighter bg-red-500/10 px-2 py-0.5 rounded text-orange-400 border border-red-500/20">
+                        <span>{stats.batacazo.pred.homeGoals}</span>
+                        <span>-</span>
+                        <span>{stats.batacazo.pred.awayGoals}</span>
                       </div>
                     </div>
                   </div>
@@ -228,7 +234,7 @@ export default function MatchFlyerModal({
 
               {/* Columnas de Predicciones */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-                
+
                 {/* Columna Equipo A */}
                 <div className="flex flex-col gap-2">
                   <div className="flex flex-col items-center bg-slate-800/20 p-3 rounded-2xl relative overflow-hidden group">
@@ -239,17 +245,17 @@ export default function MatchFlyerModal({
                       {stats.homeBet.length} Votos
                     </span>
                   </div>
-                  
-                  <div className="bg-slate-800/10 rounded-xl p-2.5 flex-1 overflow-y-auto max-h-[40vh] custom-scrollbar">
+
+                  <div className="bg-slate-800/10 rounded-xl p-2.5 flex-1 overflow-y-auto max-h-[40vh] custom-scrollbar flex flex-col justify-center">
                     {stats.homeBet.length <= 3 ? (
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-3 justify-center items-center py-4 h-full min-h-[140px]">
                         {stats.homeBet.map(({ user, pred }) => (
-                          <div key={user.uid} className="flex justify-between items-center bg-slate-950/30 px-3 py-3 rounded-xl hover:border-slate-600/30 transition-all border border-transparent">
-                            <span className="text-xs font-black text-slate-200">{user.displayName}</span>
-                            <div className="flex items-center gap-1.5 font-bold font-mono text-base">
-                              <span className="text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">{pred.homeGoals}</span>
+                          <div key={user.uid} className="flex flex-col items-center justify-center bg-slate-950/30 px-4 py-3 rounded-xl hover:border-slate-600/30 transition-all border border-transparent w-full max-w-[200px] text-center gap-1.5 shadow-sm">
+                            {stats.homeBet.length <= 1 ? (<span className="text-xs sm:text-2xl font-black text-slate-100 tracking-wide">{user.displayName}</span>) : (<span className="text-xs sm:text-lg font-black text-slate-100 tracking-wide">{user.displayName}</span>)}
+                            <div className="flex items-center gap-2 font-black font-mono text-base sm:text-lg">
+                              <span className="text-emerald-400 bg-emerald-400/10 px-2.5 py-0.5 rounded">{pred.homeGoals}</span>
                               <span className="text-slate-600 text-xs">-</span>
-                              <span className="text-slate-400">{pred.awayGoals}</span>
+                              <span className="text-slate-400 bg-slate-950/40 px-2 py-0.5 rounded">{pred.awayGoals}</span>
                             </div>
                           </div>
                         ))}
@@ -281,17 +287,17 @@ export default function MatchFlyerModal({
                       {stats.drawBet.length} Votos
                     </span>
                   </div>
-                  
-                  <div className="bg-slate-800/10 rounded-xl p-2.5 flex-1 overflow-y-auto max-h-[40vh] custom-scrollbar">
+
+                  <div className="bg-slate-800/10 rounded-xl p-2.5 flex-1 overflow-y-auto max-h-[40vh] custom-scrollbar flex flex-col justify-center">
                     {stats.drawBet.length <= 3 ? (
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-3 justify-center items-center py-4 h-full min-h-[140px]">
                         {stats.drawBet.map(({ user, pred }) => (
-                          <div key={user.uid} className="flex justify-between items-center bg-slate-950/30 px-3 py-3 rounded-xl hover:border-slate-600/30 transition-all border border-transparent">
-                            <span className="text-xs font-black text-slate-200">{user.displayName}</span>
-                            <div className="flex items-center gap-1.5 font-bold font-mono text-base">
-                              <span className="text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">{pred.homeGoals}</span>
-                              <span className="text-slate-600 text-xs">-</span>
-                              <span className="text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">{pred.awayGoals}</span>
+                          <div key={user.uid} className="flex flex-col items-center justify-center bg-slate-950/30 px-4 py-3 rounded-xl hover:border-slate-600/30 transition-all border border-transparent w-full max-w-[200px] text-center gap-1.5 shadow-sm">
+                            {stats.drawBet.length <= 1 ? (<span className="text-xs sm:text-2xl font-black text-slate-100 tracking-wide">{user.displayName}</span>) : (<span className="text-xs sm:text-lg font-black text-slate-100 tracking-wide">{user.displayName}</span>)}
+                            <div className="flex items-center gap-2 font-black font-mono text-base sm:text-lg">
+                              <span className="text-yellow-500 bg-yellow-500/10 px-2.5 py-0.5 rounded">{pred.homeGoals}</span>
+                              <span className="text-slate-650 text-xs">-</span>
+                              <span className="text-yellow-500 bg-yellow-500/10 px-2.5 py-0.5 rounded">{pred.awayGoals}</span>
                             </div>
                           </div>
                         ))}
@@ -324,17 +330,17 @@ export default function MatchFlyerModal({
                       {stats.awayBet.length} Votos
                     </span>
                   </div>
-                  
-                  <div className="bg-slate-800/10 rounded-xl p-2.5 flex-1 overflow-y-auto max-h-[40vh] custom-scrollbar">
+
+                  <div className="bg-slate-800/10 rounded-xl p-2.5 flex-1 overflow-y-auto max-h-[40vh] custom-scrollbar flex flex-col justify-center">
                     {stats.awayBet.length <= 3 ? (
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-3 justify-center items-center py-4 h-full min-h-[140px]">
                         {stats.awayBet.map(({ user, pred }) => (
-                          <div key={user.uid} className="flex justify-between items-center bg-slate-950/30 px-3 py-3 rounded-xl hover:border-slate-600/30 transition-all border border-transparent">
-                            <span className="text-xs font-black text-slate-200">{user.displayName}</span>
-                            <div className="flex items-center gap-1.5 font-bold font-mono text-base">
-                              <span className="text-slate-400">{pred.homeGoals}</span>
+                          <div key={user.uid} className="flex flex-col items-center justify-center bg-slate-950/30 px-4 py-3 rounded-xl hover:border-slate-600/30 transition-all border border-transparent w-full max-w-[200px] text-center gap-1.5 shadow-sm">
+                            {stats.awayBet.length <= 1 ? (<span className="text-xs sm:text-2xl font-black text-slate-100 tracking-wide">{user.displayName}</span>) : (<span className="text-xs sm:text-lg font-black text-slate-100 tracking-wide">{user.displayName}</span>)}
+                            <div className="flex items-center gap-2 font-black font-mono text-base sm:text-lg">
+                              <span className="text-slate-400 bg-slate-950/40 px-2 py-0.5 rounded">{pred.homeGoals}</span>
                               <span className="text-slate-600 text-xs">-</span>
-                              <span className="text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">{pred.awayGoals}</span>
+                              <span className="text-emerald-400 bg-emerald-400/10 px-2.5 py-0.5 rounded">{pred.awayGoals}</span>
                             </div>
                           </div>
                         ))}
