@@ -4,6 +4,7 @@ import { toPng } from 'html-to-image';
 import { getFlagUrl } from '../../utils/flags';
 import type { Partido, Usuario } from '../../models/types';
 import { abbreviateTeam } from './ComparisonGrid';
+import { getMatchVenue } from '../../utils/venues';
 
 interface PredictionData {
   homeGoals: number | null;
@@ -186,13 +187,14 @@ export default function TodayMatchesFlyerModal({
               {todayMatches.map(match => {
                 const batacazo = getBatacazo(match.id);
                 const isMatchLocked = isLockedForOthers && currentUserUid !== 'admin'; // locked for display
+                const venue = getMatchVenue(match.group || 'A', match.homeTeam);
 
                 return (
                   <div key={match.id} className="bg-slate-950/40 border border-slate-850 rounded-2xl p-5 flex flex-col justify-between gap-5 hover:border-slate-800/60 transition-all shadow-lg backdrop-blur-sm">
                     {/* Equipos, banderas y grupo */}
                     <div className="space-y-4">
                       <div className="flex justify-between items-center text-[10px] font-extrabold text-slate-500 uppercase tracking-wider font-mono">
-                        <span>Grupo {match.group}</span>
+                        <span className="text-indigo-400">{venue.flag} {venue.country} • G{match.group}</span>
                         <span>
                           {new Date(match.kickoffTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} HS
                         </span>

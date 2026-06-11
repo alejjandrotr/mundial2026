@@ -5,6 +5,7 @@ import { getFlagUrl } from '../../utils/flags';
 import type { Partido, Usuario } from '../../models/types';
 import { abbreviateTeam } from './ComparisonGrid';
 import { getAbbreviatedUserNames } from '../../utils/userNames';
+import { getMatchVenue } from '../../utils/venues';
 
 interface PredictionData {
   homeGoals: number | null;
@@ -135,6 +136,8 @@ export default function MatchFlyerModal({
   const nameH = match.homeTeam;
   const nameV = match.awayTeam;
 
+  const venue = getMatchVenue(match.group || 'A', match.homeTeam);
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-fadeIn">
       {/* Backdrop con blur */}
@@ -166,6 +169,8 @@ export default function MatchFlyerModal({
                 <span>{new Date(match.kickoffTime).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
                 <span className="text-slate-600">•</span>
                 <span className="text-indigo-400 font-bold">{new Date(match.kickoffTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} HS</span>
+                <span className="text-slate-600">•</span>
+                <span className="text-slate-350">{venue.flag} {venue.country} ({venue.city})</span>
               </div>
             </div>
           </div>
