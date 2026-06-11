@@ -163,15 +163,7 @@ export default function MatchFlyerModal({
               <h2 className="text-lg font-black text-white tracking-tight uppercase">
                 {abbreviateTeam(nameH)} <span className="text-slate-500 font-medium px-2">VS</span> {abbreviateTeam(nameV)}
               </h2>
-              <div className="flex flex-wrap items-center gap-x-2 text-xs text-slate-450 font-mono mt-0.5">
-                <span>Grupo {match.group}</span>
-                <span className="text-slate-600">•</span>
-                <span>{new Date(match.kickoffTime).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
-                <span className="text-slate-600">•</span>
-                <span className="text-indigo-400 font-bold">{new Date(match.kickoffTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} HS</span>
-                <span className="text-slate-600">•</span>
-                <span className="text-slate-350">{venue.flag} {venue.country} ({venue.city})</span>
-              </div>
+              <p className="text-xs text-slate-400">Resumen de Predicciones</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -194,7 +186,19 @@ export default function MatchFlyerModal({
         </div>
 
         {/* Contenido scrolleable / Capturable */}
-        <div ref={flyerRef} className="relative z-10 flex-1 overflow-y-auto p-3 sm:p-4 space-y-4 bg-slate-900">
+        <div ref={flyerRef} className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-slate-900">
+          
+          {/* Fila Informativa de Sede y Hora dentro del Flyer Capturable */}
+          <div className="text-center space-y-1.5 pb-2 border-b border-slate-800/60">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-fuchsia-500/20 rounded-full text-[10px] font-extrabold uppercase text-fuchsia-300 tracking-wider">
+              <span>Grupo {match.group}</span>
+              <span className="text-fuchsia-500">•</span>
+              <span>{venue.flag} {venue.country} ({venue.city})</span>
+            </div>
+            <div className="text-xs text-indigo-400 font-extrabold font-mono tracking-wide">
+              {new Date(match.kickoffTime).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()} • {new Date(match.kickoffTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} HS
+            </div>
+          </div>
 
           {stats.validCount === 0 ? (
             <div className="py-20 flex flex-col items-center justify-center text-slate-500 gap-3">
