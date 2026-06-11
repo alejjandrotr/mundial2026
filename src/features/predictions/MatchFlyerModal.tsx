@@ -4,6 +4,7 @@ import { toPng } from 'html-to-image';
 import { getFlagUrl } from '../../utils/flags';
 import type { Partido, Usuario } from '../../models/types';
 import { abbreviateTeam } from './ComparisonGrid';
+import { getAbbreviatedUserNames } from '../../utils/userNames';
 
 interface PredictionData {
   homeGoals: number | null;
@@ -125,6 +126,10 @@ export default function MatchFlyerModal({
     return { homeBet, awayBet, drawBet, batacazo, avgH, avgV, validCount: count };
   }, [match.id, users, predictions, isLockedForOthers, currentUserUid]);
 
+  const userAbbreviations = useMemo(() => {
+    return getAbbreviatedUserNames(users.map(u => u.displayName));
+  }, [users]);
+
   const flagH = getFlagUrl(match.homeTeam);
   const flagV = getFlagUrl(match.awayTeam);
   const nameH = match.homeTeam;
@@ -162,7 +167,7 @@ export default function MatchFlyerModal({
             <button 
               onClick={handleDownload}
               disabled={downloading}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-full transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-650 hover:bg-emerald-550 text-white text-xs font-bold rounded-full transition-all disabled:opacity-50 cursor-pointer"
               title="Descargar como imagen"
             >
               {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -170,7 +175,7 @@ export default function MatchFlyerModal({
             </button>
             <button 
               onClick={onClose}
-              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full transition-all"
+              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full transition-all cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -193,27 +198,27 @@ export default function MatchFlyerModal({
           ) : (
             <>
               {stats.batacazo && (
-                <div className="relative mx-auto max-w-2xl bg-gradient-to-r from-orange-500/20 via-red-500/20 to-purple-500/20 p-0.5 rounded-2xl">
-                  <div className="bg-slate-900 border border-red-500/30 rounded-xl p-3 flex flex-col sm:flex-row items-center justify-between gap-4 backdrop-blur-xl">
-                    <div className="flex-1 text-center sm:text-left">
-                      <div className="flex items-center justify-center sm:justify-start gap-1.5 text-orange-400">
+                <div className="relative mx-auto max-w-lg bg-gradient-to-r from-orange-500/20 via-red-500/20 to-purple-500/20 p-0.5 rounded-2xl">
+                  <div className="bg-slate-900 rounded-xl p-3 flex items-center justify-between gap-4 backdrop-blur-xl">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-1.5 text-orange-400">
                         <Flame className="w-4 h-4 animate-pulse" />
                         <h3 className="text-xs font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
                           El Batacazo
                         </h3>
                       </div>
-                      <p className="text-[10px] text-slate-400 mt-1">
-                        Más atrevido frente al promedio ({stats.avgH.toFixed(1)} - {stats.avgV.toFixed(1)}).
+                      <p className="text-[10px] text-slate-450 mt-0.5">
+                        Promedio general: {stats.avgH.toFixed(1)} - {stats.avgV.toFixed(1)}
                       </p>
                     </div>
                     
-                    <div className="flex flex-col items-center flex-shrink-0 bg-slate-950/50 px-4 py-2 rounded-xl border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]">
-                      <span className="text-[10px] font-bold text-slate-300 mb-1 truncate max-w-[120px]">
+                    <div className="flex items-center gap-3 bg-slate-950/60 px-4 py-2 rounded-xl border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]">
+                      <span className="text-xs font-black text-slate-200">
                         {stats.batacazo.user.displayName}
                       </span>
-                      <div className="flex items-center gap-2 text-2xl font-black">
+                      <div className="flex items-center gap-1.5 text-lg font-black font-mono">
                         <span className="text-white">{stats.batacazo.pred.homeGoals}</span>
-                        <span className="text-slate-600 text-lg">-</span>
+                        <span className="text-slate-600">-</span>
                         <span className="text-white">{stats.batacazo.pred.awayGoals}</span>
                       </div>
                     </div>
@@ -226,90 +231,129 @@ export default function MatchFlyerModal({
                 
                 {/* Columna Equipo A */}
                 <div className="flex flex-col gap-2">
-                  <div className="flex flex-col items-center bg-slate-800/40 p-3 rounded-2xl border border-slate-700/50 relative overflow-hidden group">
+                  <div className="flex flex-col items-center bg-slate-800/20 p-3 rounded-2xl relative overflow-hidden group">
                     <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     {flagH && <img src={flagH} alt={nameH} className="w-16 h-10 object-cover rounded-lg shadow-md mb-2 ring-1 ring-white/10" />}
                     <h3 className="font-black text-sm text-center text-white">{nameH}</h3>
-                    <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest bg-slate-950/50 px-2 py-0.5 rounded-full border border-slate-800">
+                    <span className="text-[10px] font-bold text-slate-450 mt-1 uppercase tracking-widest bg-slate-950/40 px-2 py-0.5 rounded-full">
                       {stats.homeBet.length} Votos
                     </span>
                   </div>
                   
-                  <div className="bg-slate-800/20 rounded-xl p-2 border border-slate-700/30 flex-1 overflow-y-auto max-h-[40vh] custom-scrollbar">
-                    <div className="space-y-1.5">
-                      {stats.homeBet.map(({ user, pred }) => (
-                        <div key={user.uid} className="flex justify-between items-center bg-slate-900/40 px-2 py-1.5 rounded-lg border border-slate-700/30 hover:border-slate-600/50 transition-colors">
-                          <span className="text-[11px] font-semibold text-slate-300 truncate max-w-[120px]">{user.displayName}</span>
-                          <div className="flex items-center gap-1 font-bold font-mono text-xs">
-                            <span className="text-emerald-400 bg-emerald-400/10 px-1 rounded">{pred.homeGoals}</span>
-                            <span className="text-slate-600 text-[10px]">-</span>
-                            <span className="text-slate-400">{pred.awayGoals}</span>
+                  <div className="bg-slate-800/10 rounded-xl p-2.5 flex-1 overflow-y-auto max-h-[40vh] custom-scrollbar">
+                    {stats.homeBet.length <= 3 ? (
+                      <div className="flex flex-col gap-2">
+                        {stats.homeBet.map(({ user, pred }) => (
+                          <div key={user.uid} className="flex justify-between items-center bg-slate-950/30 px-3 py-3 rounded-xl hover:border-slate-600/30 transition-all border border-transparent">
+                            <span className="text-xs font-black text-slate-200">{user.displayName}</span>
+                            <div className="flex items-center gap-1.5 font-bold font-mono text-base">
+                              <span className="text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">{pred.homeGoals}</span>
+                              <span className="text-slate-600 text-xs">-</span>
+                              <span className="text-slate-400">{pred.awayGoals}</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      {stats.homeBet.length === 0 && (
-                        <div className="text-center text-slate-600 text-[10px] italic py-2">Nadie apostó aquí</div>
-                      )}
-                    </div>
+                        ))}
+                        {stats.homeBet.length === 0 && (
+                          <div className="text-center text-slate-600 text-[10px] italic py-2">Nadie apostó aquí</div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5 justify-start">
+                        {stats.homeBet.map(({ user, pred }) => (
+                          <div key={user.uid} className="flex items-center gap-1.5 bg-slate-950/30 px-2.5 py-1 rounded-full text-[11px] font-bold text-slate-350 hover:bg-slate-950/50 transition-colors">
+                            <span className="truncate max-w-[100px]" title={user.displayName}>{userAbbreviations[user.displayName] || user.displayName}</span>
+                            <span className="flex items-center gap-0.5 font-mono text-[10px] font-extrabold bg-emerald-500/10 text-emerald-400 px-1.5 py-0.2 rounded-full">
+                              {pred.homeGoals}-{pred.awayGoals}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Columna Empate */}
                 <div className="flex flex-col gap-2">
-                  <div className="flex flex-col items-center justify-center bg-slate-800/20 p-3 rounded-2xl border border-slate-700/30 h-[106px]">
+                  <div className="flex flex-col items-center justify-center bg-slate-800/10 p-3 rounded-2xl h-[106px]">
                     <div className="text-slate-500 font-black text-3xl mb-1 opacity-50">=</div>
                     <h3 className="font-black text-sm text-center text-slate-400">EMPATE</h3>
-                    <span className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest bg-slate-950/50 px-2 py-0.5 rounded-full border border-slate-800">
+                    <span className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest bg-slate-950/40 px-2 py-0.5 rounded-full">
                       {stats.drawBet.length} Votos
                     </span>
                   </div>
                   
-                  <div className="bg-slate-800/10 rounded-xl p-2 border border-slate-700/20 flex-1 overflow-y-auto max-h-[40vh] custom-scrollbar">
-                    <div className="space-y-1.5">
-                      {stats.drawBet.map(({ user, pred }) => (
-                        <div key={user.uid} className="flex justify-between items-center bg-slate-900/30 px-2 py-1.5 rounded-lg border border-slate-700/20 hover:border-slate-600/40 transition-colors">
-                          <span className="text-[11px] font-semibold text-slate-400 truncate max-w-[120px]">{user.displayName}</span>
-                          <div className="flex items-center gap-1 font-bold font-mono text-xs">
-                            <span className="text-yellow-500 bg-yellow-500/10 px-1 rounded">{pred.homeGoals}</span>
-                            <span className="text-slate-600 text-[10px]">-</span>
-                            <span className="text-yellow-500 bg-yellow-500/10 px-1 rounded">{pred.awayGoals}</span>
+                  <div className="bg-slate-800/10 rounded-xl p-2.5 flex-1 overflow-y-auto max-h-[40vh] custom-scrollbar">
+                    {stats.drawBet.length <= 3 ? (
+                      <div className="flex flex-col gap-2">
+                        {stats.drawBet.map(({ user, pred }) => (
+                          <div key={user.uid} className="flex justify-between items-center bg-slate-950/30 px-3 py-3 rounded-xl hover:border-slate-600/30 transition-all border border-transparent">
+                            <span className="text-xs font-black text-slate-200">{user.displayName}</span>
+                            <div className="flex items-center gap-1.5 font-bold font-mono text-base">
+                              <span className="text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">{pred.homeGoals}</span>
+                              <span className="text-slate-600 text-xs">-</span>
+                              <span className="text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded">{pred.awayGoals}</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      {stats.drawBet.length === 0 && (
-                        <div className="text-center text-slate-600 text-[10px] italic py-2">Nadie apostó aquí</div>
-                      )}
-                    </div>
+                        ))}
+                        {stats.drawBet.length === 0 && (
+                          <div className="text-center text-slate-600 text-[10px] italic py-2">Nadie apostó aquí</div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5 justify-start">
+                        {stats.drawBet.map(({ user, pred }) => (
+                          <div key={user.uid} className="flex items-center gap-1.5 bg-slate-950/30 px-2.5 py-1 rounded-full text-[11px] font-bold text-slate-350 hover:bg-slate-950/50 transition-colors">
+                            <span className="truncate max-w-[100px]" title={user.displayName}>{userAbbreviations[user.displayName] || user.displayName}</span>
+                            <span className="flex items-center gap-0.5 font-mono text-[10px] font-extrabold bg-yellow-500/10 text-yellow-500 px-1.5 py-0.2 rounded-full">
+                              {pred.homeGoals}-{pred.awayGoals}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Columna Equipo B */}
                 <div className="flex flex-col gap-2">
-                  <div className="flex flex-col items-center bg-slate-800/40 p-3 rounded-2xl border border-slate-700/50 relative overflow-hidden group">
+                  <div className="flex flex-col items-center bg-slate-800/20 p-3 rounded-2xl relative overflow-hidden group">
                     <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     {flagV && <img src={flagV} alt={nameV} className="w-16 h-10 object-cover rounded-lg shadow-md mb-2 ring-1 ring-white/10" />}
                     <h3 className="font-black text-sm text-center text-white">{nameV}</h3>
-                    <span className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest bg-slate-950/50 px-2 py-0.5 rounded-full border border-slate-800">
+                    <span className="text-[10px] font-bold text-slate-450 mt-1 uppercase tracking-widest bg-slate-950/40 px-2 py-0.5 rounded-full">
                       {stats.awayBet.length} Votos
                     </span>
                   </div>
                   
-                  <div className="bg-slate-800/20 rounded-xl p-2 border border-slate-700/30 flex-1 overflow-y-auto max-h-[40vh] custom-scrollbar">
-                    <div className="space-y-1.5">
-                      {stats.awayBet.map(({ user, pred }) => (
-                        <div key={user.uid} className="flex justify-between items-center bg-slate-900/40 px-2 py-1.5 rounded-lg border border-slate-700/30 hover:border-slate-600/50 transition-colors">
-                          <span className="text-[11px] font-semibold text-slate-300 truncate max-w-[120px]">{user.displayName}</span>
-                          <div className="flex items-center gap-1 font-bold font-mono text-xs">
-                            <span className="text-slate-400">{pred.homeGoals}</span>
-                            <span className="text-slate-600 text-[10px]">-</span>
-                            <span className="text-emerald-400 bg-emerald-400/10 px-1 rounded">{pred.awayGoals}</span>
+                  <div className="bg-slate-800/10 rounded-xl p-2.5 flex-1 overflow-y-auto max-h-[40vh] custom-scrollbar">
+                    {stats.awayBet.length <= 3 ? (
+                      <div className="flex flex-col gap-2">
+                        {stats.awayBet.map(({ user, pred }) => (
+                          <div key={user.uid} className="flex justify-between items-center bg-slate-950/30 px-3 py-3 rounded-xl hover:border-slate-600/30 transition-all border border-transparent">
+                            <span className="text-xs font-black text-slate-200">{user.displayName}</span>
+                            <div className="flex items-center gap-1.5 font-bold font-mono text-base">
+                              <span className="text-slate-400">{pred.homeGoals}</span>
+                              <span className="text-slate-600 text-xs">-</span>
+                              <span className="text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">{pred.awayGoals}</span>
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      {stats.awayBet.length === 0 && (
-                        <div className="text-center text-slate-600 text-[10px] italic py-2">Nadie apostó aquí</div>
-                      )}
-                    </div>
+                        ))}
+                        {stats.awayBet.length === 0 && (
+                          <div className="text-center text-slate-600 text-[10px] italic py-2">Nadie apostó aquí</div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5 justify-start">
+                        {stats.awayBet.map(({ user, pred }) => (
+                          <div key={user.uid} className="flex items-center gap-1.5 bg-slate-950/30 px-2.5 py-1 rounded-full text-[11px] font-bold text-slate-350 hover:bg-slate-950/50 transition-colors">
+                            <span className="truncate max-w-[100px]" title={user.displayName}>{userAbbreviations[user.displayName] || user.displayName}</span>
+                            <span className="flex items-center gap-0.5 font-mono text-[10px] font-extrabold bg-emerald-500/10 text-emerald-400 px-1.5 py-0.2 rounded-full">
+                              {pred.homeGoals}-{pred.awayGoals}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
