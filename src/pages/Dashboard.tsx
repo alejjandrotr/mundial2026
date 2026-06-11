@@ -6,12 +6,13 @@ import MatchList from '../features/matches/MatchList';
 import QuinielaForm from '../features/predictions/QuinielaForm';
 import ComparisonGrid from '../features/predictions/ComparisonGrid';
 import AdminPanel from '../features/admin/AdminPanel';
+import DangerZone from '../features/admin/DangerZone';
 import { seedMockMatches, simulateRealScores } from '../utils/seed';
 
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'live' | 'quiniela' | 'comparison' | 'admin'>('quiniela');
-  const [quinielaGroup, setQuinielaGroup] = useState<string>('A');
+  const quinielaGroup = 'A';
 
   const [devUnlocked, setDevUnlocked] = useState(false);
   const [devPassword, setDevPassword] = useState('');
@@ -145,12 +146,7 @@ export default function Dashboard() {
 
             {/* Columna Derecha: Partidos Reales */}
             <div className="lg:col-span-7 xl:col-span-8">
-              <MatchList
-                onPredictClick={(group) => {
-                  setQuinielaGroup(group);
-                  setActiveTab('quiniela');
-                }}
-              />
+              <MatchList />
             </div>
           </div>
         )}
@@ -230,6 +226,10 @@ export default function Dashboard() {
                     Simular Resultados Reales (Mundial)
                   </button>
                 </div>
+              </div>
+              
+              <div className="pt-4 border-t border-slate-800/60 mt-4">
+                <DangerZone />
               </div>
             </div>
           )}

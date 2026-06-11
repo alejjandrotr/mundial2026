@@ -5,6 +5,7 @@ import { getCachedMatches, getCachedUsers, getCachedPredictions } from '../../ut
 import { Loader2, Table, ShieldAlert, RefreshCw, FlaskConical, Lock, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { isLockedForOthers as getIsLockedForOthers } from '../../config/constants';
 import MatchFlyerModal from './MatchFlyerModal';
 
 export function abbreviateTeam(name: string): string {
@@ -134,9 +135,7 @@ export default function ComparisonGrid() {
   };
 
   const isLockedForOthers = useMemo(() => {
-    // Lock predictions for others until June 11, 2026 at 14:40:00 UTC (1h 20m before kickoff)
-    const lockTime = new Date('2026-06-11T16:45:00Z').getTime();
-    return Date.now() < lockTime;
+    return getIsLockedForOthers();
   }, []);
 
   const loadGridData = useCallback(async (forceRefresh = false) => {

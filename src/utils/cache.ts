@@ -48,6 +48,8 @@ export async function getCachedMatches(forceRefresh = false): Promise<Partido[]>
 }
 
 /** Obtiene todos los usuarios, usando caché si está fresco */
+import { toTitleCase } from './format';
+
 export async function getCachedUsers(forceRefresh = false): Promise<Usuario[]> {
   if (!forceRefresh && isFresh(usersCache)) {
     return usersCache.data;
@@ -57,7 +59,11 @@ export async function getCachedUsers(forceRefresh = false): Promise<Usuario[]> {
   const snapshot = await getDocs(q);
   const data: Usuario[] = [];
   snapshot.forEach((doc) => {
-    data.push(doc.data() as Usuario);
+    const userData = doc.data() as Usuario;
+    if (userData.displayName) {
+      userData.displayName = toTitleCase(userData.displayName);
+    }
+    data.push(userData);
   });
 
   usersCache = { data, timestamp: Date.now() };

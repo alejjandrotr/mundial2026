@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useRef, useState } from 'react';
+import { useMemo, useEffect, useRef, useState } from 'react';
 import { X, Flame, Swords, ShieldAlert, Download, Loader2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { getFlagUrl } from '../../utils/flags';
@@ -82,7 +82,7 @@ export default function MatchFlyerModal({
     });
 
     if (count === 0) {
-      return { homeBet: [], awayBet: [], drawBet: [], batacazo: null, avgH: 0, avgV: 0, validCount: 0 };
+      return { homeBet: [] as typeof validPreds, awayBet: [] as typeof validPreds, drawBet: [] as typeof validPreds, batacazo: null as { user: Usuario, pred: PredictionData, distance: number } | null, avgH: 0, avgV: 0, validCount: 0 };
     }
 
     const avgH = totalH / count;

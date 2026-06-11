@@ -33,6 +33,8 @@ interface QuinielaFormProps {
   initialGroup?: string;
 }
 
+import { isLockedForOthers, PREDICTIONS_LOCK_TIMESTAMP } from '../../config/constants';
+
 export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) {
   const { currentUser } = useAuth();
   const [matches, setMatches] = useState<Partido[]>([]);
@@ -43,9 +45,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
   const [activeGroup, setActiveGroup] = useState<string>(initialGroup);
 
   const isLocked = useMemo(() => {
-    // Block editing on June 11, 2026 at 14:40:00 UTC (1h 20m before kickoff)
-    const lockTime = new Date('2026-06-11T16:45:00Z').getTime();
-    return Date.now() >= lockTime;
+    return !isLockedForOthers();
   }, []);
 
 
@@ -305,7 +305,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
           <Lock className="w-5 h-5 flex-shrink-0 mt-0.5 animate-pulse text-red-400" />
           <div className="text-xs">
             <h4 className="font-bold text-sm text-white mb-0.5">🔒 Predicciones Cerradas</h4>
-            <p className="text-slate-300 leading-relaxed">La fecha límite para realizar modificaciones ha vencido (<strong>11 de junio de 2026 a las 14:40 UTC</strong>). Actualmente te encuentras en modo lectura y tus pronósticos están protegidos.</p>
+            <p className="text-slate-300 leading-relaxed">La fecha límite para realizar modificaciones ha vencido (<strong>{new Date(PREDICTIONS_LOCK_TIMESTAMP).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}</strong>). Actualmente te encuentras en modo lectura y tus pronósticos están protegidos.</p>
           </div>
         </div>
       )}

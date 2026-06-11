@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { collection, query, where, getDocs, doc, setDoc } from "firebase/firestore";
 import { db } from "../config/firebase";
 import type { Usuario } from "../models/types";
+import { toTitleCase } from "../utils/format";
 
 interface AuthContextType {
   currentUser: Usuario | null;
@@ -32,7 +33,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const savedUser = localStorage.getItem("currentUser");
     if (savedUser) {
       try {
-        setCurrentUser(JSON.parse(savedUser));
+        const parsed = JSON.parse(savedUser);
+        if (parsed && parsed.displayName) {
+          parsed.displayName = toTitleCase(parsed.displayName);
+        }
+        setCurrentUser(parsed);
       } catch (e) {
         localStorage.removeItem("currentUser");
       }
@@ -57,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const loggedUser: Usuario = {
       uid: userData.uid,
-      displayName: userData.displayName,
+      displayName: toTitleCase(userData.displayName || ""),
       email: userData.email,
       totalPoints: userData.totalPoints || 0,
       role: userData.role || "user",
@@ -76,10 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error("El correo electrónico ya está registrado");
     }
 
+    const titleCasedName = toTitleCase(name);
     const newUserRef = doc(collection(db, "usuarios"));
     const newUser = {
       uid: newUserRef.id,
-      displayName: name,
+      displayName: titleCasedName,
       email: email,
       password: password,
       totalPoints: 0,

@@ -1,19 +1,26 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
-import type { Partido } from '../../models/types';
-import { CalendarDays, Clock, PlayCircle, CheckCircle2 } from 'lucide-react';
+import type { Partido, Usuario } from '../../models/types';
+import { CalendarDays, Clock, PlayCircle, CheckCircle2, Flame, Sparkles } from 'lucide-react';
 import { getFlagUrl } from '../../utils/flags';
 import { getMatchVenue } from '../../utils/venues';
+import { getCachedUsers, getCachedPredictions } from '../../utils/cache';
+import { useAuth } from '../../context/AuthContext';
+import MatchFlyerModal from '../predictions/MatchFlyerModal';
+import TodayMatchesFlyerModal from '../predictions/TodayMatchesFlyerModal';
 
+import { isLockedForOthers as getIsLockedForOthers } from '../../config/constants';
 
-interface MatchListProps {
-  onPredictClick?: (groupName: string) => void;
-}
-
-export default function MatchList({ onPredictClick }: MatchListProps) {
+export default function MatchList() {
   const [matches, setMatches] = useState<Partido[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  const [users, setUsers] = useState<Usuario[]>([]);
+  const [predictions, setPredictions] = useState<Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>>>({});
+  const [selectedMatchForFlyer, setSelectedMatchForFlyer] = useState<Partido | null>(null);
+  const [showTodayFlyer, setShowTodayFlyer] = useState(false);
+  const { currentUser } = useAuth();
 
   useEffect(() => {
     const q = query(collection(db, 'partidos'), orderBy('kickoffTime', 'asc'));
@@ -32,7 +39,28 @@ export default function MatchList({ onPredictClick }: MatchListProps) {
       setLoading(false);
     });
 
+    // Fetch users and predictions for flyer modal
+    Promise.all([getCachedUsers(), getCachedPredictions()])
+      .then(([usersData, predictionsData]) => {
+        setUsers(usersData);
+        setPredictions(predictionsData);
+      })
+      .catch((err) => console.error('Error fetching cache data in MatchList:', err));
+
     return () => unsubscribe();
+  }, []);
+
+  const sortedUsers = useMemo(() => {
+    if (!currentUser) return users;
+    const currentIdx = users.findIndex(u => u.uid === currentUser.uid);
+    if (currentIdx === -1) return users;
+    const result = [...users];
+    const [me] = result.splice(currentIdx, 1);
+    return [me, ...result];
+  }, [users, currentUser]);
+
+  const isLockedForOthers = useMemo(() => {
+    return getIsLockedForOthers();
   }, []);
 
   const formatTime = (date: Date) => {
@@ -52,9 +80,19 @@ export default function MatchList({ onPredictClick }: MatchListProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-6">
-        <CalendarDays className="w-5 h-5 text-blue-400" />
-        <h2 className="text-lg font-bold text-white">Próximos Partidos</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+        <div className="flex items-center gap-2">
+          <CalendarDays className="w-5 h-5 text-blue-400" />
+          <h2 className="text-lg font-bold text-white">Próximos Partidos</h2>
+        </div>
+        
+        <button
+          onClick={() => setShowTodayFlyer(true)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-violet-600/20 to-fuchsia-600/20 hover:from-violet-600/35 hover:to-fuchsia-600/35 text-fuchsia-350 border border-fuchsia-500/30 text-xs font-bold rounded-xl transition-all transform hover:scale-[1.02] shadow-lg shadow-fuchsia-950/10 cursor-pointer whitespace-nowrap"
+        >
+          <Sparkles className="w-4 h-4 text-fuchsia-400 animate-pulse" />
+          <span>Partidos de Hoy (Flyer)</span>
+        </button>
       </div>
 
       {matches.map((match) => {
@@ -121,21 +159,15 @@ export default function MatchList({ onPredictClick }: MatchListProps) {
             </div>
           </div>
           
-          {/* Action Button (Placeholder for predictions) */}
+          {/* Action Buttons */}
           <div className="mt-5 text-center">
-            {match.status === 'pending' && (
-              <button
-                onClick={() => onPredictClick?.(match.group || 'A')}
-                className="bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 text-sm font-semibold py-2 px-6 rounded-lg transition-colors w-full sm:w-auto"
-              >
-                Ingresar Predicción
-              </button>
-            )}
-            {match.status !== 'pending' && (
-              <button className="bg-slate-700/30 hover:bg-slate-700/50 text-slate-300 border border-slate-600/30 text-sm font-semibold py-2 px-6 rounded-lg transition-colors w-full sm:w-auto">
-                Ver Predicciones
-              </button>
-            )}
+            <button
+              onClick={() => setSelectedMatchForFlyer(match)}
+              className="bg-gradient-to-r from-violet-600/20 to-fuchsia-600/20 hover:from-violet-600/35 hover:to-fuchsia-600/35 text-fuchsia-300 border border-fuchsia-500/35 text-[11px] font-bold py-2 px-5 rounded-lg transition-all transform hover:scale-[1.02] shadow-md flex items-center justify-center gap-1.5 w-full sm:w-auto mx-auto cursor-pointer"
+            >
+              <Flame className="w-3.5 h-3.5 text-fuchsia-400" />
+              <span>Ver Pronósticos</span>
+            </button>
           </div>
 
           </div>
@@ -146,6 +178,28 @@ export default function MatchList({ onPredictClick }: MatchListProps) {
         <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-8 text-center text-slate-400">
           No hay partidos programados.
         </div>
+      )}
+
+      {selectedMatchForFlyer && (
+        <MatchFlyerModal 
+          match={selectedMatchForFlyer}
+          users={sortedUsers}
+          predictions={predictions}
+          onClose={() => setSelectedMatchForFlyer(null)}
+          currentUserUid={currentUser?.uid}
+          isLockedForOthers={isLockedForOthers}
+        />
+      )}
+
+      {showTodayFlyer && (
+        <TodayMatchesFlyerModal
+          matches={matches}
+          users={sortedUsers}
+          predictions={predictions}
+          onClose={() => setShowTodayFlyer(false)}
+          currentUserUid={currentUser?.uid}
+          isLockedForOthers={isLockedForOthers}
+        />
       )}
     </div>
   );

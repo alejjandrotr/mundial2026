@@ -19,12 +19,14 @@ interface SimulatedMatchState {
   isSimulated: boolean;
 }
 
+import { isLockedForOthers } from '../../config/constants';
+
 export default function WhatIfSimulator() {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
 
   const isBeforeRevealDate = useMemo(() => {
-    return new Date() < new Date('2026-06-11T16:45:00Z');
+    return isLockedForOthers();
   }, []);
   const [matches, setMatches] = useState<Partido[]>([]);
   const [users, setUsers] = useState<Usuario[]>([]);

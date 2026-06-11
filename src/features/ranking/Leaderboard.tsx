@@ -4,6 +4,7 @@ import { db } from '../../config/firebase';
 import type { Usuario, Partido } from '../../models/types';
 import { Medal, Trophy, Share2, Calendar, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 import { calculateMatchPoints } from '../../utils/scoring';
+import { toTitleCase } from '../../utils/format';
 
 export default function Leaderboard() {
   const [users, setUsers] = useState<Usuario[]>([]);
@@ -62,7 +63,7 @@ export default function Leaderboard() {
       
       // 2. Fetch predictions for these matches
       const predQuery = query(
-        collection(db, 'predicciones'),
+         collection(db, 'predicciones'),
         where('partidoId', 'in', targetMatches.map(m => m.id))
       );
       const predictionsSnap = await getDocs(predQuery);
@@ -140,7 +141,11 @@ export default function Leaderboard() {
     const unsubscribeUsers = onSnapshot(q, (snapshot) => {
       const usersData: Usuario[] = [];
       snapshot.forEach((doc) => {
-        usersData.push(doc.data() as Usuario);
+        const u = doc.data() as Usuario;
+        if (u.displayName) {
+          u.displayName = toTitleCase(u.displayName);
+        }
+        usersData.push(u);
       });
       setUsers(usersData);
       setLoading(false);
