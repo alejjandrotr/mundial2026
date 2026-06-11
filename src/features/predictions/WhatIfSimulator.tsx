@@ -30,6 +30,15 @@ export default function WhatIfSimulator() {
   const [users, setUsers] = useState<Usuario[]>([]);
   const [predictions, setPredictions] = useState<Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>>>({});
 
+  const sortedUsers = useMemo(() => {
+    if (!currentUser) return users;
+    const currentIdx = users.findIndex((u) => u.uid === currentUser.uid);
+    if (currentIdx === -1) return users;
+    const result = [...users];
+    const [me] = result.splice(currentIdx, 1);
+    return [me, ...result];
+  }, [users, currentUser]);
+
   // Local simulated matches state
   const [simulatedMatches, setSimulatedMatches] = useState<Record<string, SimulatedMatchState>>({});
 
@@ -239,15 +248,20 @@ export default function WhatIfSimulator() {
                     <th className="py-3.5 px-3 font-bold text-center text-indigo-300 min-w-32 bg-slate-900/95 z-20 border-l border-indigo-500/20 shadow-[inset_0_0_15px_rgba(79,70,229,0.05)]">
                       Simulación Oficial
                     </th>
-                    {users.map((user) => (
-                      <th key={user.uid} className="py-3.5 px-4 font-bold text-center text-white min-w-32 bg-slate-900/95 border-l border-slate-800 z-20">
-                        <div className="flex flex-col items-center">
-                          <span className="font-semibold text-slate-100 truncate max-w-28">{user.displayName}</span>
-                          <span className="text-[10px] text-indigo-400 font-mono font-bold mt-0.5">{userSimulatedPoints[user.uid] || 0} pts simulados</span>
-                          <span className="text-[9px] text-slate-500 font-mono">Real: {user.totalPoints || 0} pts</span>
-                        </div>
-                      </th>
-                    ))}
+                    {sortedUsers.map((user) => {
+                      const isSelf = currentUser && user.uid === currentUser.uid;
+                      return (
+                        <th key={user.uid} className={`py-3.5 px-4 font-bold text-center text-white min-w-32 bg-slate-900/95 border-l border-slate-800 z-20 ${isSelf ? 'bg-indigo-950/30 border-x border-x-indigo-500/25 ring-1 ring-indigo-500/10' : ''}`}>
+                          <div className="flex flex-col items-center">
+                            <span className={`font-semibold truncate max-w-28 ${isSelf ? 'text-indigo-300 font-extrabold' : 'text-slate-100'}`}>
+                              {user.displayName} {isSelf && '(Tú)'}
+                            </span>
+                            <span className="text-[10px] text-indigo-400 font-mono font-bold mt-0.5">{userSimulatedPoints[user.uid] || 0} pts simulados</span>
+                            <span className="text-[9px] text-slate-500 font-mono">Real: {user.totalPoints || 0} pts</span>
+                          </div>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
@@ -318,7 +332,7 @@ export default function WhatIfSimulator() {
                         </td>
 
                         {/* Users Predictions Columns */}
-                        {users.map((user) => {
+                        {sortedUsers.map((user) => {
                           const userPreds = predictions[user.uid] || {};
                           const pred = userPreds[match.id];
 
@@ -342,6 +356,9 @@ export default function WhatIfSimulator() {
                             : { points: 0, matchedHome: false, matchedAway: false };
 
                           let cellClass = "border-l border-slate-800/60 text-center py-3 px-4 font-semibold text-slate-300 transition-all";
+                          if (isOwnPrediction) {
+                            cellClass += " bg-indigo-500/[0.02] border-x border-x-indigo-500/15";
+                          }
                           
                           if (hasSimResult && !isHidden) {
                             if (scoreResult.points === 3) {

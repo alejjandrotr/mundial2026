@@ -64,7 +64,9 @@ export default function QualifiersPreview({ qualifiers }: QualifiersPreviewProps
                     {flagUrl1 && (
                       <img src={flagUrl1} alt="" className="w-4 h-3 object-cover rounded border border-yellow-500/10 flex-shrink-0" />
                     )}
-                    <span className="truncate">{hasFirst ? q.first : 'Por definir'}</span>
+                    <span className="truncate">
+                      {hasFirst ? q.first : <span className="print:hidden">Por definir</span>}
+                    </span>
                   </div>
                   {hasFirst && <Star className="w-3 h-3 fill-yellow-500 text-yellow-500 flex-shrink-0" />}
                 </div>
@@ -82,7 +84,9 @@ export default function QualifiersPreview({ qualifiers }: QualifiersPreviewProps
                     {flagUrl2 && (
                       <img src={flagUrl2} alt="" className="w-4 h-3 object-cover rounded border border-emerald-500/10 flex-shrink-0" />
                     )}
-                    <span className="truncate">{hasSecond ? q.second : 'Por definir'}</span>
+                    <span className="truncate">
+                      {hasSecond ? q.second : <span className="print:hidden">Por definir</span>}
+                    </span>
                   </div>
                   {hasSecond && <Star className="w-3 h-3 fill-emerald-500 text-emerald-400 flex-shrink-0" />}
                 </div>

@@ -43,13 +43,13 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white p-4 md:p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-slate-950 text-white p-2 sm:p-4 relative overflow-hidden">
       {/* Background World Cup Aura Glows */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-worldcup-purple/10 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] rounded-full bg-worldcup-pink/5 blur-[150px] pointer-events-none" />
 
       {/* Encabezado */}
-      <header className="flex justify-between items-center max-w-7xl mx-auto bg-slate-900/80 p-4 rounded-2xl border border-slate-800/80 backdrop-blur-md mb-8 relative shadow-lg">
+      <header className="no-print flex justify-between items-center max-w-full xl:max-w-[1600px] mx-auto bg-slate-900/80 p-4 rounded-2xl border border-slate-800/80 backdrop-blur-md mb-8 relative shadow-lg">
         {/* Top brand line */}
         <div className="absolute top-0 left-0 right-0 h-[3px] bg-worldcup-gradient rounded-t-2xl" />
         <div className="flex items-center gap-3">
@@ -66,7 +66,7 @@ export default function Dashboard() {
             👤 {currentUser?.displayName || 'Jugador'}
           </span>
           <button 
-            onClick={logout}
+             onClick={logout}
             className="flex items-center gap-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 px-3.5 py-1.5 rounded-xl transition-all font-bold text-xs border border-red-500/20 active:scale-95"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -75,9 +75,9 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto relative">
+      <main className="max-w-full xl:max-w-[1600px] mx-auto relative">
         {/* Selector de Pestañas Principal */}
-        <div className="flex bg-slate-900/60 border border-slate-800/70 p-1.5 rounded-2xl backdrop-blur-md max-w-xl mb-8 gap-1 shadow-inner">
+        <div className="no-print flex bg-slate-900/60 border border-slate-800/70 p-1.5 rounded-2xl backdrop-blur-md max-w-xl mb-8 gap-1 shadow-inner">
           <button
             onClick={() => setActiveTab('quiniela')}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
@@ -160,7 +160,7 @@ export default function Dashboard() {
         )}
 
         {/* Zona de Desarrollo Protegida */}
-        <div className="mt-16 max-w-md bg-slate-800/10 border border-slate-800/60 rounded-3xl p-5 backdrop-blur-sm transition-all duration-300">
+        <div className="no-print mt-16 max-w-md bg-slate-800/10 border border-slate-800/60 rounded-3xl p-5 backdrop-blur-sm transition-all duration-300">
           {!devUnlocked ? (
             <form onSubmit={handleUnlockDev} className="space-y-3.5">
               <div className="flex items-center gap-2 text-slate-500">

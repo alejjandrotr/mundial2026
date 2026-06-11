@@ -6,8 +6,8 @@ export default function SimulatorPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white p-4 md:p-6">
-      <header className="flex justify-between items-center max-w-7xl mx-auto bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 backdrop-blur-md mb-8">
+    <div className="min-h-screen bg-slate-900 text-white p-2 sm:p-4">
+      <header className="no-print flex justify-between items-center max-w-full xl:max-w-[1600px] mx-auto bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 backdrop-blur-md mb-8">
         <div className="flex items-center gap-3">
           <button 
             onClick={() => navigate('/')}
@@ -19,7 +19,7 @@ export default function SimulatorPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto">
+      <main className="max-w-full xl:max-w-[1600px] mx-auto">
         <WhatIfSimulator />
       </main>
     </div>

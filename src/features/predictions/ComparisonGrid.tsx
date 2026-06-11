@@ -2,9 +2,79 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import type { Partido, Usuario } from '../../models/types';
 import { calculateMatchPoints } from '../../utils/scoring';
 import { getCachedMatches, getCachedUsers, getCachedPredictions } from '../../utils/cache';
-import { Loader2, Table, ShieldAlert, RefreshCw, FlaskConical, Lock } from 'lucide-react';
+import { Loader2, Table, ShieldAlert, RefreshCw, FlaskConical, Lock, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+
+export function abbreviateTeam(name: string): string {
+  const clean = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  if (clean.includes("mexico")) return "MEX";
+  if (clean.includes("sudafrica")) return "RSA";
+  if (clean.includes("corea")) return "KOR";
+  if (clean.includes("chequia")) return "CZE";
+  if (clean.includes("canada")) return "CAN";
+  if (clean.includes("bosnia")) return "BIH";
+  if (clean.includes("catar")) return "QAT";
+  if (clean.includes("suiza")) return "SUI";
+  if (clean.includes("brasil")) return "BRA";
+  if (clean.includes("marruecos")) return "MAR";
+  if (clean.includes("haiti")) return "HAI";
+  if (clean.includes("escocia")) return "SCO";
+  if (clean.includes("estados unidos") || clean.includes("usa")) return "USA";
+  if (clean.includes("paraguay")) return "PAR";
+  if (clean.includes("australia")) return "AUS";
+  if (clean.includes("turquia")) return "TUR";
+  if (clean.includes("alemania")) return "GER";
+  if (clean.includes("curazao")) return "CUW";
+  if (clean.includes("costa de marfil")) return "CIV";
+  if (clean.includes("ecuador")) return "ECU";
+  if (clean.includes("japon")) return "JPN";
+  if (clean.includes("suecia")) return "SWE";
+  if (clean.includes("belgica")) return "BEL";
+  if (clean.includes("egipto")) return "EGY";
+  if (clean.includes("iran")) return "IRN";
+  if (clean.includes("nueva zelanda")) return "NZL";
+  if (clean.includes("espana")) return "ESP";
+  if (clean.includes("cabo verde")) return "CPV";
+  if (clean.includes("arabia")) return "KSA";
+  if (clean.includes("uruguay")) return "URU";
+  if (clean.includes("francia")) return "FRA";
+  if (clean.includes("senegal")) return "SEN";
+  if (clean.includes("irak")) return "IRQ";
+  if (clean.includes("noruega")) return "NOR";
+  if (clean.includes("argentina")) return "ARG";
+  if (clean.includes("argelia")) return "ALG";
+  if (clean.includes("austria")) return "AUT";
+  if (clean.includes("jordania")) return "JOR";
+  if (clean.includes("portugal")) return "POR";
+  if (clean.includes("congo")) return "COD";
+  if (clean.includes("uzbekistan")) return "UZB";
+  if (clean.includes("colombia")) return "COL";
+  if (clean.includes("inglaterra")) return "ENG";
+  if (clean.includes("croacia")) return "CRO";
+  if (clean.includes("ghana")) return "GHA";
+  if (clean.includes("panama")) return "PAN";
+  return name.substring(0, 3).toUpperCase();
+}
+
+export function getAbbreviatedUserNames(names: string[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  names.forEach(name => {
+    let len = 3;
+    let abbrev = name.substring(0, len).toUpperCase().trim();
+    while (len < name.length) {
+      const isUnique = names.every(other => {
+        if (other === name) return true;
+        return other.substring(0, len).toUpperCase().trim() !== abbrev;
+      });
+      if (isUnique) break;
+      len++;
+      abbrev = name.substring(0, len).toUpperCase().trim();
+    }
+    result[name] = abbrev;
+  });
+  return result;
+}
 
 interface PredictionData {
   homeGoals: number | null;
@@ -18,8 +88,48 @@ export default function ComparisonGrid() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastLoaded, setLastLoaded] = useState<Date | null>(null);
+  const [isPrintMode, setIsPrintMode] = useState(false);
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+
+  const sortedUsers = useMemo(() => {
+    if (!currentUser) return users;
+    const currentIdx = users.findIndex((u) => u.uid === currentUser.uid);
+    if (currentIdx === -1) return users;
+    const result = [...users];
+    const [me] = result.splice(currentIdx, 1);
+    return [me, ...result];
+  }, [users, currentUser]);
+
+  const userAbbreviations = useMemo(() => {
+    const displayNames = users.map(u => u.displayName);
+    return getAbbreviatedUserNames(displayNames);
+  }, [users]);
+
+  const chunkedUsers = useMemo(() => {
+    const chunks = [];
+    const chunkSize = 18; // 18 users fits horizontally on a landscape page
+    for (let i = 0; i < sortedUsers.length; i += chunkSize) {
+      chunks.push(sortedUsers.slice(i, i + chunkSize));
+    }
+    return chunks;
+  }, [sortedUsers]);
+
+  const getTeamName = (name: string) => {
+    return isPrintMode ? abbreviateTeam(name) : name;
+  };
+
+  const getUserName = (name: string) => {
+    return isPrintMode ? (userAbbreviations[name] || name.substring(0, 3).toUpperCase()) : name;
+  };
+
+  const handlePrint = () => {
+    setIsPrintMode(true);
+    setTimeout(() => {
+      window.print();
+      setIsPrintMode(false);
+    }, 150);
+  };
 
   const isLockedForOthers = useMemo(() => {
     // Lock predictions for others until June 11, 2026 at 14:40:00 UTC (1h 20m before kickoff)
@@ -69,6 +179,66 @@ export default function ComparisonGrid() {
 
   return (
     <div className="space-y-6">
+      {isPrintMode && (
+        <style dangerouslySetInnerHTML={{ __html: `
+          @media print {
+            body, html, #root {
+              background: white !important;
+              color: black !important;
+              overflow: visible !important;
+              height: auto !important;
+            }
+            .no-print, header, nav, button, .bg-amber-500\\/10, .bg-slate-800\\/30 {
+              display: none !important;
+            }
+            .overflow-x-auto, .max-h-\\[70vh\\] {
+              max-height: none !important;
+              overflow: visible !important;
+            }
+            .print-page-break {
+              page-break-after: always;
+              break-after: page;
+              overflow: visible !important;
+            }
+            table {
+              width: 100% !important;
+              table-layout: auto !important;
+              border-collapse: collapse !important;
+              background: white !important;
+              color: black !important;
+            }
+            .print-partidos-col {
+              width: 110px !important;
+              min-width: 110px !important;
+              max-width: 110px !important;
+            }
+            .print-oficial-col {
+              width: 60px !important;
+              min-width: 60px !important;
+              max-width: 60px !important;
+            }
+            .print-user-col {
+              min-width: 38px !important;
+            }
+            th, td {
+              border: 1px solid #777 !important;
+              color: black !important;
+              background: white !important;
+              padding: 2px 3px !important;
+              font-size: 8.5px !important;
+              line-height: 1.1 !important;
+            }
+            th {
+              background-color: #eee !important;
+              font-weight: bold !important;
+            }
+            @page {
+              size: landscape;
+              margin: 0.4cm;
+            }
+          }
+        `}} />
+      )}
       {isLockedForOthers && (
         <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-4 flex items-start gap-3 text-amber-400 backdrop-blur-sm animate-fadeIn">
           <Lock className="w-5 h-5 flex-shrink-0 mt-0.5 animate-pulse text-amber-400" />
@@ -100,6 +270,14 @@ export default function ComparisonGrid() {
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Recargando...' : 'Actualizar'}
+          </button>
+
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-1.5 text-xs font-semibold bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 px-3 py-2 rounded-xl transition-all shadow-md cursor-pointer"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Imprimir PDF
           </button>
 
           <button
@@ -140,6 +318,103 @@ export default function ComparisonGrid() {
           <ShieldAlert className="w-8 h-8 text-slate-600 mx-auto mb-2" />
           Aún no hay usuarios registrados.
         </div>
+      ) : isPrintMode ? (
+        <div className="print-container">
+          {chunkedUsers.map((userChunk, chunkIdx) => (
+            <div key={chunkIdx} className="print-page-break mb-8 bg-white p-4 rounded-xl border border-slate-200">
+              <h3 className="text-black font-black text-xs mb-3 font-sans">
+                PLANILLA COMPARATIVA DE PRONÓSTICOS — GRUPO DE PARTICIPANTES {chunkIdx + 1} de {chunkedUsers.length}
+              </h3>
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr>
+                    <th className="print-partidos-col py-2 px-2 font-bold text-black border border-slate-400 bg-slate-100">
+                      Partidos
+                    </th>
+                    <th className="print-oficial-col py-2 px-2 font-bold text-center text-black border border-slate-400 bg-slate-100">
+                      Oficial
+                    </th>
+                    {userChunk.map((user) => {
+                      const isSelf = currentUser && user.uid === currentUser.uid;
+                      return (
+                        <th key={user.uid} className={`print-user-col py-2 px-2 font-bold text-center text-black border border-slate-400 bg-slate-100 ${isSelf ? 'bg-emerald-50' : ''}`}>
+                          {getUserName(user.displayName)} {isSelf && '(Tú)'}
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {matches.map((match) => {
+                    const hasRealResult = match.status === 'finished' || match.status === 'in_progress';
+                    const realH = match.homeGoals;
+                    const realV = match.awayGoals;
+
+                    return (
+                      <tr key={match.id} className="hover:bg-slate-50">
+                        <td className="print-partidos-col py-1 px-2 font-bold text-black border border-slate-300 truncate font-sans">
+                          <span className="text-[9px] text-slate-500 font-mono mr-1">G{match.group}</span>
+                          {getTeamName(match.homeTeam)} vs {getTeamName(match.awayTeam)}
+                        </td>
+                        <td className="print-oficial-col py-1 px-2 text-center text-black border border-slate-300 font-black">
+                          {hasRealResult ? `${realH} a ${realV}` : ''}
+                        </td>
+                        {userChunk.map((user) => {
+                          const isSelf = currentUser && user.uid === currentUser.uid;
+                          const userPreds = predictions[user.uid] || {};
+                          const pred = userPreds[match.id];
+
+                          if (isLockedForOthers && !isSelf) {
+                            return (
+                              <td key={user.uid} className="py-1 px-2 text-center text-slate-400 border border-slate-300 font-mono text-[9px]">
+                                🔒
+                              </td>
+                            );
+                          }
+
+                          if (!pred || (pred.homeGoals === null && pred.awayGoals === null)) {
+                            return (
+                              <td key={user.uid} className="py-1 px-2 text-center text-slate-450 border border-slate-300">
+                                
+                              </td>
+                            );
+                          }
+
+                          const predH = pred.homeGoals;
+                          const predV = pred.awayGoals;
+
+                          const scoreResult = hasRealResult
+                            ? calculateMatchPoints(predH, predV, realH, realV)
+                            : { points: 0, matchedHome: false, matchedAway: false };
+
+                          let cellBg = isSelf ? 'bg-emerald-50/20' : '';
+                          if (hasRealResult) {
+                            if (scoreResult.points === 3) {
+                              cellBg = 'bg-yellow-100 font-black';
+                            } else if (scoreResult.points === 2) {
+                              cellBg = 'bg-emerald-100';
+                            }
+                          }
+
+                          return (
+                            <td key={user.uid} className={`py-1 px-2 text-center text-black border border-slate-300 ${cellBg}`}>
+                              <div className="flex flex-col items-center">
+                                <span className="font-semibold">{predH} a {predV}</span>
+                                {hasRealResult && (
+                                  <span className="text-[8px] font-bold text-slate-600">+{scoreResult.points}p</span>
+                                )}
+                              </div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
       ) : (
         <div className="bg-slate-800/20 border border-slate-700/40 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md">
           <div className="overflow-x-auto max-h-[70vh]">
@@ -152,14 +427,19 @@ export default function ComparisonGrid() {
                   <th className="py-3.5 px-3 font-bold text-center text-slate-300 min-w-28 bg-slate-900/95">
                     Oficial
                   </th>
-                  {users.map((user) => (
-                    <th key={user.uid} className="py-3.5 px-4 font-bold text-center text-white min-w-32 bg-slate-900/95 border-l border-slate-800">
-                      <div className="flex flex-col items-center">
-                        <span className="font-semibold text-slate-100 truncate max-w-28">{user.displayName}</span>
-                        <span className="text-[10px] text-emerald-400 font-mono font-bold mt-0.5">{user.totalPoints || 0} pts</span>
-                      </div>
-                    </th>
-                  ))}
+                  {sortedUsers.map((user) => {
+                    const isSelf = currentUser && user.uid === currentUser.uid;
+                    return (
+                      <th key={user.uid} className={`py-3.5 px-4 font-bold text-center text-white min-w-32 bg-slate-900/95 border-l border-slate-800 ${isSelf ? 'bg-emerald-950/30 border-x border-x-emerald-500/25 ring-1 ring-emerald-500/10' : ''}`}>
+                        <div className="flex flex-col items-center">
+                          <span className={`font-semibold truncate max-w-28 ${isSelf ? 'text-emerald-300 font-extrabold' : 'text-slate-100'}`}>
+                            {getUserName(user.displayName)} {isSelf && '(Tú)'}
+                          </span>
+                          <span className="text-[10px] text-emerald-400 font-mono font-bold mt-0.5">{user.totalPoints || 0} pts</span>
+                        </div>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
@@ -176,7 +456,7 @@ export default function ComparisonGrid() {
                           <span className="bg-slate-800 border border-slate-700/50 text-slate-400 text-[10px] font-mono px-1.5 py-0.5 rounded mr-2 uppercase">
                             G{match.group}
                           </span>
-                          <span>{match.homeTeam} vs {match.awayTeam}</span>
+                          <span>{getTeamName(match.homeTeam)} vs {getTeamName(match.awayTeam)}</span>
                         </div>
                       </td>
 
@@ -190,12 +470,12 @@ export default function ComparisonGrid() {
                             )}
                           </span>
                         ) : (
-                          <span className="text-slate-500 font-semibold italic text-[11px]">Por definir</span>
+                          <span className="text-slate-500 font-semibold italic text-[11px] print:hidden">Por definir</span>
                         )}
                       </td>
 
                       {/* Users Predictions Columns */}
-                      {users.map((user) => {
+                      {sortedUsers.map((user) => {
                         const isSelf = currentUser && user.uid === currentUser.uid;
                         const userPreds = predictions[user.uid] || {};
                         const pred = userPreds[match.id];
@@ -213,7 +493,7 @@ export default function ComparisonGrid() {
                         if (!pred || (pred.homeGoals === null && pred.awayGoals === null)) {
                           return (
                             <td key={user.uid} className="py-3 px-4 text-center text-slate-600 italic text-[11px] border-l border-slate-800/60 bg-slate-950/[0.05]">
-                              -
+                              <span className="print:hidden">-</span>
                             </td>
                           );
                         }
@@ -227,6 +507,9 @@ export default function ComparisonGrid() {
                           : { points: 0, matchedHome: false, matchedAway: false };
 
                         let cellClass = "border-l border-slate-800/60 text-center py-3 px-4 font-semibold text-slate-300";
+                        if (isSelf) {
+                          cellClass += " bg-emerald-500/[0.02] border-x border-x-emerald-500/15";
+                        }
                         
                         if (hasRealResult) {
                           if (scoreResult.points === 3) {
