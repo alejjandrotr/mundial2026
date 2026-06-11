@@ -55,6 +55,44 @@ export default function TodayMatchesFlyerModal({
         scale: 2,
         backgroundColor: '#0f172a',
         useCORS: true,
+        onclone: (clonedDoc) => {
+          const style = clonedDoc.createElement('style');
+          style.innerHTML = `
+            :root, * {
+              --color-slate-50: #f8fafc !important;
+              --color-slate-100: #f1f5f9 !important;
+              --color-slate-200: #e2e8f0 !important;
+              --color-slate-300: #cbd5e1 !important;
+              --color-slate-400: #94a3b8 !important;
+              --color-slate-500: #64748b !important;
+              --color-slate-600: #475569 !important;
+              --color-slate-700: #334155 !important;
+              --color-slate-800: #1e293b !important;
+              --color-slate-900: #0f172a !important;
+              --color-slate-950: #020617 !important;
+              
+              --color-violet-500: #8b5cf6 !important;
+              --color-violet-600: #7c3aed !important;
+              
+              --color-fuchsia-350: #f5d0fe !important;
+              --color-fuchsia-300: #f0abfc !important;
+              --color-fuchsia-400: #e879f9 !important;
+              --color-fuchsia-500: #d946ef !important;
+              --color-fuchsia-600: #c084fc !important;
+              
+              --color-emerald-400: #34d399 !important;
+              --color-emerald-500: #10b981 !important;
+              --color-emerald-600: #059669 !important;
+              
+              --color-amber-400: #fbbf24 !important;
+              --color-amber-500: #f59e0b !important;
+              --color-orange-500: #f97316 !important;
+              --color-red-500: #ef4444 !important;
+              --color-red-400: #f87171 !important;
+            }
+          `;
+          clonedDoc.head.appendChild(style);
+        }
       });
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
