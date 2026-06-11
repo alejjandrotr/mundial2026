@@ -1,6 +1,6 @@
 import { useMemo, useEffect, useRef, useState } from 'react';
 import { X, Flame, Swords, Download, Loader2, Lock, Sparkles } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { getFlagUrl } from '../../utils/flags';
 import type { Partido, Usuario } from '../../models/types';
 import { abbreviateTeam } from './ComparisonGrid';
@@ -51,50 +51,11 @@ export default function TodayMatchesFlyerModal({
     if (!flyerRef.current) return;
     try {
       setDownloading(true);
-      const canvas = await html2canvas(flyerRef.current, {
-        scale: 2,
+      const dataUrl = await toPng(flyerRef.current, {
+        pixelRatio: 2,
         backgroundColor: '#0f172a',
-        useCORS: true,
-        onclone: (clonedDoc) => {
-          const style = clonedDoc.createElement('style');
-          style.innerHTML = `
-            :root, * {
-              --color-slate-50: #f8fafc !important;
-              --color-slate-100: #f1f5f9 !important;
-              --color-slate-200: #e2e8f0 !important;
-              --color-slate-300: #cbd5e1 !important;
-              --color-slate-400: #94a3b8 !important;
-              --color-slate-500: #64748b !important;
-              --color-slate-600: #475569 !important;
-              --color-slate-700: #334155 !important;
-              --color-slate-800: #1e293b !important;
-              --color-slate-900: #0f172a !important;
-              --color-slate-950: #020617 !important;
-              
-              --color-violet-500: #8b5cf6 !important;
-              --color-violet-600: #7c3aed !important;
-              
-              --color-fuchsia-350: #f5d0fe !important;
-              --color-fuchsia-300: #f0abfc !important;
-              --color-fuchsia-400: #e879f9 !important;
-              --color-fuchsia-500: #d946ef !important;
-              --color-fuchsia-600: #c084fc !important;
-              
-              --color-emerald-400: #34d399 !important;
-              --color-emerald-500: #10b981 !important;
-              --color-emerald-600: #059669 !important;
-              
-              --color-amber-400: #fbbf24 !important;
-              --color-amber-500: #f59e0b !important;
-              --color-orange-500: #f97316 !important;
-              --color-red-500: #ef4444 !important;
-              --color-red-400: #f87171 !important;
-            }
-          `;
-          clonedDoc.head.appendChild(style);
-        }
+        cacheBust: true,
       });
-      const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = `Partidos_de_Hoy_Resumen.png`;
       link.href = dataUrl;
