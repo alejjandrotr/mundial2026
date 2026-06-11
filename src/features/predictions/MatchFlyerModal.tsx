@@ -204,25 +204,25 @@ export default function MatchFlyerModal({
 
             {/* El Batacazo Highlight (Derecha) */}
             {stats.batacazo && (
-              <div className="relative w-full md:w-auto bg-gradient-to-r from-orange-500/20 via-red-500/20 to-purple-500/20 p-0.5 rounded-2xl flex-shrink-0">
-                <div className="bg-slate-900 rounded-xl px-4 py-2.5 flex items-center gap-3 backdrop-blur-xl justify-between md:justify-start">
+              <div className="relative w-full md:w-auto bg-gradient-to-r from-orange-500/20 via-red-500/20 to-purple-500/20 p-0.5 rounded-2xl flex-shrink-0 shadow-[0_0_20px_rgba(239,68,68,0.1)]">
+                <div className="bg-slate-900 rounded-xl px-5 py-3 flex items-center gap-4 backdrop-blur-xl justify-between md:justify-start">
                   <div>
-                    <div className="flex items-center gap-1 text-orange-400">
-                      <Flame className="w-4 h-4 animate-pulse" />
-                      <h3 className="text-[11px] font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
+                    <div className="flex items-center gap-1.5 text-orange-400">
+                      <Flame className="w-5 h-5 animate-pulse text-orange-500" />
+                      <h3 className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
                         El Batacazo
                       </h3>
                     </div>
-                    <p className="text-[9px] text-slate-450 mt-0.5 font-medium">
+                    <p className="text-[10px] text-slate-450 mt-1 font-semibold">
                       Promedio: {stats.avgH.toFixed(1)} - {stats.avgV.toFixed(1)}
                     </p>
                   </div>
                   
-                  <div className="flex items-center gap-2 bg-slate-950/60 px-2.5 py-1.5 rounded-xl border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]">
-                    <span className="text-[11px] font-black text-slate-100 tracking-tight">
+                  <div className="flex items-center gap-3 bg-slate-950/70 px-3 py-2 rounded-xl border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                    <span className="text-xs sm:text-sm font-black text-slate-50 tracking-tight">
                       {stats.batacazo.user.displayName}
                     </span>
-                    <div className="flex items-center gap-1 text-base font-black font-mono tracking-tighter bg-red-500/10 px-1.5 py-0.2 rounded text-orange-400 border border-red-500/20">
+                    <div className="flex items-center gap-1 text-lg sm:text-2xl font-black font-mono tracking-tighter bg-red-500/10 px-2.5 py-0.5 rounded text-orange-400 border border-red-500/20">
                       <span>{stats.batacazo.pred.homeGoals}</span>
                       <span>-</span>
                       <span>{stats.batacazo.pred.awayGoals}</span>
