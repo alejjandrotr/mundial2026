@@ -186,18 +186,51 @@ export default function MatchFlyerModal({
         </div>
 
         {/* Contenido scrolleable / Capturable */}
-        <div ref={flyerRef} className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-slate-900">
+        <div ref={flyerRef} className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-slate-900">
           
-          {/* Fila Informativa de Sede y Hora dentro del Flyer Capturable */}
-          <div className="text-center space-y-1.5 pb-2 border-b border-slate-800/60">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-fuchsia-500/20 rounded-full text-[10px] font-extrabold uppercase text-fuchsia-300 tracking-wider">
-              <span>Grupo {match.group}</span>
-              <span className="text-fuchsia-500">•</span>
-              <span>{venue.flag} {venue.country} ({venue.city})</span>
+          {/* Cabecera Capturable con Información del Partido a la izquierda y El Batacazo a la derecha */}
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 pb-4 border-b border-slate-800/60">
+            {/* Info del Partido (Izquierda) */}
+            <div className="text-center md:text-left space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-fuchsia-500/20 rounded-full text-[10px] font-extrabold uppercase text-fuchsia-300 tracking-wider">
+                <span>Grupo {match.group}</span>
+                <span className="text-fuchsia-500">•</span>
+                <span>{venue.flag} {venue.country} ({venue.city})</span>
+              </div>
+              <div className="text-xs text-indigo-400 font-extrabold font-mono tracking-wide">
+                {new Date(match.kickoffTime).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()} • {new Date(match.kickoffTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} HS
+              </div>
             </div>
-            <div className="text-xs text-indigo-400 font-extrabold font-mono tracking-wide">
-              {new Date(match.kickoffTime).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()} • {new Date(match.kickoffTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} HS
-            </div>
+
+            {/* El Batacazo Highlight (Derecha) */}
+            {stats.batacazo && (
+              <div className="relative w-full md:w-auto bg-gradient-to-r from-orange-500/20 via-red-500/20 to-purple-500/20 p-0.5 rounded-2xl flex-shrink-0">
+                <div className="bg-slate-900 rounded-xl px-4 py-2.5 flex items-center gap-3 backdrop-blur-xl justify-between md:justify-start">
+                  <div>
+                    <div className="flex items-center gap-1 text-orange-400">
+                      <Flame className="w-4 h-4 animate-pulse" />
+                      <h3 className="text-[11px] font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
+                        El Batacazo
+                      </h3>
+                    </div>
+                    <p className="text-[9px] text-slate-450 mt-0.5 font-medium">
+                      Promedio: {stats.avgH.toFixed(1)} - {stats.avgV.toFixed(1)}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 bg-slate-950/60 px-2.5 py-1.5 rounded-xl border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)]">
+                    <span className="text-[11px] font-black text-slate-100 tracking-tight">
+                      {stats.batacazo.user.displayName}
+                    </span>
+                    <div className="flex items-center gap-1 text-base font-black font-mono tracking-tighter bg-red-500/10 px-1.5 py-0.2 rounded text-orange-400 border border-red-500/20">
+                      <span>{stats.batacazo.pred.homeGoals}</span>
+                      <span>-</span>
+                      <span>{stats.batacazo.pred.awayGoals}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {stats.validCount === 0 ? (
@@ -212,35 +245,6 @@ export default function MatchFlyerModal({
             </div>
           ) : (
             <>
-              {stats.batacazo && (
-                <div className="relative mx-auto max-w-md bg-gradient-to-r from-orange-500/20 via-red-500/20 to-purple-500/20 p-0.5 rounded-2xl">
-                  <div className="bg-slate-900 rounded-xl px-4 py-3 flex items-center justify-between gap-3 backdrop-blur-xl">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-1 text-orange-400">
-                        <Flame className="w-5 h-5 animate-pulse" />
-                        <h3 className="text-sm font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">
-                          El Batacazo
-                        </h3>
-                      </div>
-                      <p className="text-[10px] text-slate-450 mt-0.5 font-medium">
-                        Promedio general: {stats.avgH.toFixed(1)} - {stats.avgV.toFixed(1)}
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-xl border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.15)] flex-shrink-0">
-                      <span className="text-xs font-black text-slate-100 tracking-tight">
-                        {stats.batacazo.user.displayName}
-                      </span>
-                      <div className="flex items-center gap-1 text-xl font-black font-mono tracking-tighter bg-red-500/10 px-2 py-0.5 rounded text-orange-400 border border-red-500/20">
-                        <span>{stats.batacazo.pred.homeGoals}</span>
-                        <span>-</span>
-                        <span>{stats.batacazo.pred.awayGoals}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Columnas de Predicciones */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
 
