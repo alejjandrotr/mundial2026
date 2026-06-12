@@ -43,7 +43,7 @@ export default function TodayMatchesFlyerModal({
 
   // Filtrar partidos de hoy (basado en la fecha del partido)
   const todayMatches = useMemo(() => {
-    const todayStr = new Date('2026-06-11').toISOString().slice(0, 10);
+    const todayStr = new Date().toISOString().slice(0, 10);
     return matches.filter(m => {
       const matchDateStr = new Date(m.kickoffTime).toISOString().slice(0, 10);
       return matchDateStr === todayStr;
@@ -131,7 +131,7 @@ export default function TodayMatchesFlyerModal({
 
       {/* Contenedor Modal */}
       <div className={`relative w-full ${isVertical ? 'max-w-[420px]' : 'max-w-4xl'} max-h-[90vh] flex flex-col bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl overflow-hidden ring-1 ring-white/10 transition-all duration-300`}>
-        
+
         {/* Glows de fondo decorativos */}
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-violet-500/20 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-fuchsia-500/20 blur-[120px] rounded-full pointer-events-none" />
