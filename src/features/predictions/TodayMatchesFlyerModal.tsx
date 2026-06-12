@@ -1,9 +1,10 @@
 import { useMemo, useEffect, useRef, useState } from 'react';
-import { X, Flame, Swords, Download, Loader2, Lock, Sparkles } from 'lucide-react';
+import { X, Flame, Swords, Download, Loader2, Lock, Sparkles, Smartphone, Monitor } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { getFlagUrl } from '../../utils/flags';
 import type { Partido, Usuario } from '../../models/types';
 import { abbreviateTeam } from './ComparisonGrid';
+import { getAbbreviatedUserNames } from '../../utils/userNames';
 import { getMatchVenue } from '../../utils/venues';
 
 interface PredictionData {
@@ -30,6 +31,7 @@ export default function TodayMatchesFlyerModal({
 }: TodayMatchesFlyerModalProps) {
   const flyerRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const [isVertical, setIsVertical] = useState(false);
 
   // Prevenir scroll en el body
   useEffect(() => {
@@ -47,6 +49,10 @@ export default function TodayMatchesFlyerModal({
       return matchDateStr === todayStr;
     });
   }, [matches]);
+
+  const userAbbreviations = useMemo(() => {
+    return getAbbreviatedUserNames(users.map(u => u.displayName));
+  }, [users]);
 
   const handleDownload = async () => {
     if (!flyerRef.current) return;
@@ -124,7 +130,7 @@ export default function TodayMatchesFlyerModal({
       />
 
       {/* Contenedor Modal */}
-      <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl overflow-hidden ring-1 ring-white/10">
+      <div className={`relative w-full ${isVertical ? 'max-w-[420px]' : 'max-w-4xl'} max-h-[90vh] flex flex-col bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl overflow-hidden ring-1 ring-white/10 transition-all duration-300`}>
         
         {/* Glows de fondo decorativos */}
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-violet-500/20 blur-[120px] rounded-full pointer-events-none" />
@@ -144,6 +150,13 @@ export default function TodayMatchesFlyerModal({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsVertical(!isVertical)}
+              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full transition-all cursor-pointer mr-1"
+              title={isVertical ? "Cambiar a formato Horizontal (PC)" : "Cambiar a formato Vertical (Móvil)"}
+            >
+              {isVertical ? <Monitor className="w-5 h-5" /> : <Smartphone className="w-5 h-5" />}
+            </button>
             <button
               onClick={handleDownload}
               disabled={downloading || todayMatches.length === 0}
@@ -183,7 +196,7 @@ export default function TodayMatchesFlyerModal({
             </div>
 
             {/* Listado de Partidos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className={`grid grid-cols-1 ${!isVertical ? 'md:grid-cols-2' : ''} gap-6`}>
               {todayMatches.map(match => {
                 const batacazo = getBatacazo(match.id);
                 const isMatchLocked = isLockedForOthers && currentUserUid !== 'admin'; // locked for display
@@ -249,15 +262,15 @@ export default function TodayMatchesFlyerModal({
                           <span className="text-[10px] font-bold uppercase tracking-wider">Pronósticos Protegidos</span>
                         </div>
                       ) : batacazo ? (
-                        <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-red-500/10 border border-orange-500/30 p-3.5 rounded-xl space-y-1 relative overflow-hidden">
+                        <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-red-500/10 border-transparent p-3.5 rounded-xl space-y-1 relative overflow-hidden">
                           <div className="absolute top-0 right-0 w-[40px] h-[40px] bg-orange-500/10 blur-[15px] rounded-full pointer-events-none" />
                           <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase text-orange-400">
                             <Flame className="w-3.5 h-3.5 fill-orange-500/20 text-orange-500 animate-pulse" />
                             <span>El Batacazo</span>
                           </div>
                           <div className="flex justify-between items-baseline pt-0.5">
-                            <span className="text-xs font-black text-slate-200 truncate max-w-[150px]">{batacazo.user.displayName}</span>
-                            <span className="text-sm font-mono font-black text-orange-400 tracking-wider bg-slate-950/70 px-2 py-0.5 rounded-md border border-slate-800">
+                            <span className="text-xs font-black text-slate-200 truncate max-w-[150px]" title={batacazo.user.displayName}>{userAbbreviations[batacazo.user.displayName] || batacazo.user.displayName}</span>
+                            <span className="text-sm font-mono font-black text-orange-400 tracking-wider bg-slate-950/70 px-2 py-0.5 rounded-xl border border-slate-800">
                               {batacazo.pred.homeGoals} - {batacazo.pred.awayGoals}
                             </span>
                           </div>

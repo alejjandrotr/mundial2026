@@ -46,9 +46,9 @@ export function calculateMatchPoints(
     return { points: 2, matchedHome, matchedAway };
   }
 
-  // 3. Acierto Parcial de Goles (1 Punto)
+  // 3. Acierto Parcial de Goles (0 Puntos, solo visual)
   if (matchedHome || matchedAway) {
-    return { points: 1, matchedHome, matchedAway };
+    return { points: 0, matchedHome, matchedAway };
   }
 
   // 4. Ningún Acierto (0 Puntos)

@@ -14,22 +14,22 @@ export default function Leaderboard() {
 
   const shareOnWhatsApp = () => {
     if (users.length === 0) return;
-    
+
     let text = `🏆 *Tabla de Posiciones - Quiniela Mundial 2026* 🏆\n\n`;
-    users.slice(0, 10).forEach((user, idx) => {
+    users.slice(0, 20).forEach((user, idx) => {
       const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
       text += `${medal} *${user.displayName.trim()}* - ${user.totalPoints} pts\n`;
     });
-    
+
     text += `\n¡Sigue y simula tus resultados aquí!\n${window.location.origin}`;
-    
+
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
 
   const shareTodaySummary = async () => {
     if (users.length === 0) return;
-    
+
     try {
       // 1. Fetch matches
       const matchesSnap = await getDocs(collection(db, 'partidos'));
@@ -41,13 +41,13 @@ export default function Leaderboard() {
           kickoffTime: data.kickoffTime?.toDate ? data.kickoffTime.toDate() : new Date(data.kickoffTime)
         } as Partido);
       });
-      
+
       const finishedMatches = allMatches.filter(m => m.status === 'finished');
       if (finishedMatches.length === 0) {
         alert("No hay partidos finalizados para generar el resumen de la jornada.");
         return;
       }
-      
+
       // Group by date to find the latest match day
       const matchesByDate: Record<string, Partido[]> = {};
       finishedMatches.forEach(m => {
@@ -56,23 +56,23 @@ export default function Leaderboard() {
         if (!matchesByDate[dateStr]) matchesByDate[dateStr] = [];
         matchesByDate[dateStr].push(m);
       });
-      
+
       const dates = Object.keys(matchesByDate).sort();
       const latestDateStr = dates[dates.length - 1];
       const targetMatches = matchesByDate[latestDateStr];
-      
+
       // 2. Fetch predictions for these matches
       const predQuery = query(
-         collection(db, 'predicciones'),
+        collection(db, 'predicciones'),
         where('partidoId', 'in', targetMatches.map(m => m.id))
       );
       const predictionsSnap = await getDocs(predQuery);
-      
+
       const userTodayPoints: Record<string, number> = {};
       users.forEach(u => {
         userTodayPoints[u.uid] = 0;
       });
-      
+
       predictionsSnap.forEach(docSnap => {
         const p = docSnap.data();
         const match = targetMatches.find(m => m.id === p.partidoId);
@@ -83,19 +83,19 @@ export default function Leaderboard() {
           }
         }
       });
-      
+
       // Format date for display
       const sampleDate = new Date(targetMatches[0].kickoffTime);
       const formattedDate = sampleDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
-      
+
       let text = `📅 *Resumen de la Jornada (${formattedDate}) - Quiniela Mundial 2026* 📅\n\n`;
       text += `⚽ *Partidos:* \n`;
       targetMatches.forEach(m => {
         text += `• ${m.homeTeam} ${m.homeGoals} - ${m.awayGoals} ${m.awayTeam}\n`;
       });
-      
+
       text += `\n🔥 *Puntos Ganados Hoy (Aciertos):* \n`;
-      
+
       const sortedToday = Object.entries(userTodayPoints)
         .map(([uid, pts]) => ({
           user: users.find(u => u.uid === uid),
@@ -103,7 +103,7 @@ export default function Leaderboard() {
         }))
         .filter(item => item.user && item.points > 0)
         .sort((a, b) => b.points - a.points);
-        
+
       if (sortedToday.length === 0) {
         text += `Ningún participante sumó puntos en esta jornada.\n`;
       } else {
@@ -111,15 +111,15 @@ export default function Leaderboard() {
           text += `${idx + 1}. *${item.user!.displayName.trim()}* : +${item.points} pts\n`;
         });
       }
-      
+
       text += `\n🏆 *Tabla General Acumulada:* \n`;
       users.slice(0, 10).forEach((user, idx) => {
         const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
         text += `${medal} *${user.displayName.trim()}* - ${user.totalPoints} pts\n`;
       });
-      
+
       text += `\n¡Sigue y simula tus resultados aquí!\n${window.location.origin}`;
-      
+
       const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
       window.open(url, '_blank');
     } catch (err) {
@@ -182,13 +182,13 @@ export default function Leaderboard() {
         <Trophy className="w-5 h-5 text-yellow-500" />
         <h2 className="text-lg font-bold text-white">Tabla de Posiciones</h2>
       </div>
-      
+
       <div className="divide-y divide-slate-700/30">
         {users.map((user, index) => {
           const rank = index + 1;
           let rankIcon = null;
           let rankColor = "text-slate-400";
-          
+
           if (rank === 1) {
             rankIcon = <Medal className="w-5 h-5 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" />;
             rankColor = "text-yellow-400 font-bold";

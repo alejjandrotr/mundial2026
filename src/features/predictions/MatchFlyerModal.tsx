@@ -1,5 +1,5 @@
 import { useMemo, useEffect, useRef, useState } from 'react';
-import { X, Flame, Swords, ShieldAlert, Download, Loader2 } from 'lucide-react';
+import { X, Flame, Swords, ShieldAlert, Download, Loader2, Smartphone, Monitor } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { getFlagUrl } from '../../utils/flags';
 import type { Partido, Usuario } from '../../models/types';
@@ -32,6 +32,7 @@ export default function MatchFlyerModal({
 
   const flyerRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
+  const [isVertical, setIsVertical] = useState(false);
 
   // Prevenir scroll en el body cuando el modal está abierto
   useEffect(() => {
@@ -147,7 +148,7 @@ export default function MatchFlyerModal({
       />
 
       {/* Contenedor principal del Flyer */}
-      <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl overflow-hidden ring-1 ring-white/10">
+      <div className={`relative w-full ${isVertical ? 'max-w-[420px]' : 'max-w-5xl'} max-h-[90vh] flex flex-col bg-slate-900 border border-slate-700/50 rounded-3xl shadow-2xl overflow-hidden ring-1 ring-white/10 transition-all duration-300`}>
 
         {/* Glows de fondo decorativos */}
         <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/20 blur-[120px] rounded-full pointer-events-none" />
@@ -167,6 +168,13 @@ export default function MatchFlyerModal({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsVertical(!isVertical)}
+              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-full transition-all cursor-pointer mr-1"
+              title={isVertical ? "Cambiar a formato Horizontal (PC)" : "Cambiar a formato Vertical (Móvil)"}
+            >
+              {isVertical ? <Monitor className="w-5 h-5" /> : <Smartphone className="w-5 h-5" />}
+            </button>
             <button
               onClick={handleDownload}
               disabled={downloading}
@@ -189,7 +197,7 @@ export default function MatchFlyerModal({
         <div ref={flyerRef} className="relative z-10 flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-slate-900">
           
           {/* Cabecera Capturable con Información del Partido a la izquierda y El Batacazo a la derecha */}
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 pb-4 border-b border-slate-800/60">
+          <div className={`flex flex-col ${!isVertical ? 'md:flex-row' : ''} justify-between items-center gap-4 pb-4 border-b border-slate-800/60`}>
             {/* Info del Partido (Izquierda) */}
             <div className="text-center md:text-left space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-violet-500/10 to-fuchsia-500/10 border border-fuchsia-500/20 rounded-full text-[10px] font-extrabold uppercase text-fuchsia-300 tracking-wider">
@@ -204,8 +212,8 @@ export default function MatchFlyerModal({
 
             {/* El Batacazo Highlight (Derecha) */}
             {stats.batacazo && (
-              <div className="relative w-full md:w-auto bg-gradient-to-r from-orange-500/20 via-red-500/20 to-purple-500/20 p-0.5 rounded-2xl flex-shrink-0 shadow-[0_0_20px_rgba(239,68,68,0.1)]">
-                <div className="bg-slate-900 rounded-xl px-5 py-3 flex items-center gap-4 backdrop-blur-xl justify-between md:justify-start">
+              <div className="relative w-full md:w-auto flex-shrink-0 shadow-[0_0_20px_rgba(239,68,68,0.1)]">
+                <div className="bg-slate-900 rounded-xl px-5 py-3 flex items-center gap-2 backdrop-blur-xl justify-between md:justify-start">
                   <div>
                     <div className="flex items-center gap-1.5 text-orange-400">
                       <Flame className="w-5 h-5 animate-pulse text-orange-500" />
@@ -218,11 +226,11 @@ export default function MatchFlyerModal({
                     </p>
                   </div>
                   
-                  <div className="flex items-center gap-3 bg-slate-950/70 px-3 py-2 rounded-xl border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.2)]">
-                    <span className="text-xs sm:text-sm font-black text-slate-50 tracking-tight">
-                      {stats.batacazo.user.displayName}
+                  <div className="flex items-center gap-1.5 bg-slate-950/70 px-3 py-2 rounded-xl">
+                    <span className="text-xs sm:text-sm font-black text-slate-50 tracking-tight truncate max-w-[120px]" title={stats.batacazo.user.displayName}>
+                      {userAbbreviations[stats.batacazo.user.displayName] || stats.batacazo.user.displayName}
                     </span>
-                    <div className="flex items-center gap-1 text-lg sm:text-2xl font-black font-mono tracking-tighter bg-red-500/10 px-2.5 py-0.5 rounded text-orange-400 border border-red-500/20">
+                    <div className="flex items-center gap-1 text-lg sm:text-xl font-black font-mono tracking-tighter bg-red-500/10 px-2.5 py-0.5 rounded-lg text-orange-400">
                       <span>{stats.batacazo.pred.homeGoals}</span>
                       <span>-</span>
                       <span>{stats.batacazo.pred.awayGoals}</span>
@@ -246,15 +254,17 @@ export default function MatchFlyerModal({
           ) : (
             <>
               {/* Columnas de Predicciones */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              <div className={`grid grid-cols-1 ${!isVertical ? 'lg:grid-cols-3' : ''} gap-3`}>
 
                 {/* Columna Equipo A */}
                 <div className="flex flex-col gap-2">
-                  <div className="flex flex-col items-center bg-slate-800/20 p-3 rounded-2xl relative overflow-hidden group">
+                  <div className={`flex ${isVertical ? 'flex-row items-center justify-between' : 'flex-col items-center'} bg-slate-800/20 p-3 rounded-2xl relative overflow-hidden group`}>
                     <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    {flagH && <img src={flagH} alt={nameH} className="w-16 h-10 object-cover rounded-lg shadow-md mb-2 ring-1 ring-white/10" />}
-                    <h3 className="font-black text-sm text-center text-white">{nameH}</h3>
-                    <span className="text-[10px] font-bold text-slate-450 mt-1 uppercase tracking-widest bg-slate-950/40 px-2 py-0.5 rounded-full">
+                    <div className={`flex ${isVertical ? 'flex-row items-center gap-3 z-10' : 'flex-col items-center z-10'}`}>
+                      {flagH && <img src={flagH} alt={nameH} className={`object-cover rounded-lg shadow-md ring-1 ring-white/10 ${isVertical ? 'w-10 h-7 mb-0' : 'w-16 h-10 mb-2'}`} />}
+                      <h3 className="font-black text-sm text-center text-white">{nameH}</h3>
+                    </div>
+                    <span className={`text-[10px] font-bold text-slate-450 uppercase tracking-widest bg-slate-950/40 px-2 py-0.5 rounded-full z-10 ${isVertical ? 'mt-0' : 'mt-1'}`}>
                       {stats.homeBet.length} Votos
                     </span>
                   </div>
@@ -263,12 +273,12 @@ export default function MatchFlyerModal({
                     {stats.homeBet.length <= 3 ? (
                       <div className="flex flex-col gap-3 justify-center items-center py-4 h-full min-h-[140px]">
                         {stats.homeBet.map(({ user, pred }) => (
-                          <div key={user.uid} className="flex flex-col items-center justify-center bg-slate-950/30 px-4 py-3 rounded-xl hover:border-slate-600/30 transition-all border border-transparent w-full max-w-[200px] text-center gap-1.5 shadow-sm">
-                            {stats.homeBet.length <= 1 ? (<span className="text-xs sm:text-2xl font-black text-slate-100 tracking-wide">{user.displayName}</span>) : (<span className="text-xs sm:text-lg font-black text-slate-100 tracking-wide">{user.displayName}</span>)}
+                          <div key={user.uid} className="flex flex-col items-center justify-center bg-slate-950/30 px-4 py-3 rounded-xl transition-all w-full max-w-[200px] text-center gap-1.5 shadow-sm">
+                            {stats.homeBet.length <= 1 ? (<span className="text-xs sm:text-2xl font-black text-slate-100 tracking-wide truncate max-w-full" title={user.displayName}>{userAbbreviations[user.displayName] || user.displayName}</span>) : (<span className="text-xs sm:text-lg font-black text-slate-100 tracking-wide truncate max-w-full" title={user.displayName}>{userAbbreviations[user.displayName] || user.displayName}</span>)}
                             <div className="flex items-center gap-2 font-black font-mono text-base sm:text-lg">
-                              <span className="text-emerald-400 bg-emerald-400/10 px-2.5 py-0.5 rounded">{pred.homeGoals}</span>
+                              <span className="text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-xl">{pred.homeGoals}</span>
                               <span className="text-slate-600 text-xs">-</span>
-                              <span className="text-slate-400 bg-slate-950/40 px-2 py-0.5 rounded">{pred.awayGoals}</span>
+                              <span className="text-slate-400 bg-slate-950/40 px-3 py-1 rounded-xl">{pred.awayGoals}</span>
                             </div>
                           </div>
                         ))}
@@ -293,10 +303,12 @@ export default function MatchFlyerModal({
 
                 {/* Columna Empate */}
                 <div className="flex flex-col gap-2">
-                  <div className="flex flex-col items-center justify-center bg-slate-800/10 p-3 rounded-2xl h-[106px]">
-                    <div className="text-slate-500 font-black text-3xl mb-1 opacity-50">=</div>
-                    <h3 className="font-black text-sm text-center text-slate-400">EMPATE</h3>
-                    <span className="text-[10px] font-bold text-slate-500 mt-1 uppercase tracking-widest bg-slate-950/40 px-2 py-0.5 rounded-full">
+                  <div className={`flex ${isVertical ? 'flex-row items-center justify-between' : 'flex-col items-center justify-center'} bg-slate-800/10 p-3 rounded-2xl ${!isVertical ? 'h-[106px]' : ''}`}>
+                    <div className={`flex ${isVertical ? 'flex-row items-center gap-3' : 'flex-col items-center'}`}>
+                      <div className={`text-slate-500 font-black opacity-50 ${isVertical ? 'text-xl' : 'text-3xl mb-1'}`}>=</div>
+                      <h3 className="font-black text-sm text-center text-slate-400">EMPATE</h3>
+                    </div>
+                    <span className={`text-[10px] font-bold text-slate-500 uppercase tracking-widest bg-slate-950/40 px-2 py-0.5 rounded-full ${isVertical ? 'mt-0' : 'mt-1'}`}>
                       {stats.drawBet.length} Votos
                     </span>
                   </div>
@@ -305,12 +317,12 @@ export default function MatchFlyerModal({
                     {stats.drawBet.length <= 3 ? (
                       <div className="flex flex-col gap-3 justify-center items-center py-4 h-full min-h-[140px]">
                         {stats.drawBet.map(({ user, pred }) => (
-                          <div key={user.uid} className="flex flex-col items-center justify-center bg-slate-950/30 px-4 py-3 rounded-xl hover:border-slate-600/30 transition-all border border-transparent w-full max-w-[200px] text-center gap-1.5 shadow-sm">
-                            {stats.drawBet.length <= 1 ? (<span className="text-xs sm:text-2xl font-black text-slate-100 tracking-wide">{user.displayName}</span>) : (<span className="text-xs sm:text-lg font-black text-slate-100 tracking-wide">{user.displayName}</span>)}
+                          <div key={user.uid} className="flex flex-col items-center justify-center bg-slate-950/30 px-4 py-3 rounded-xl transition-all w-full max-w-[200px] text-center gap-1.5 shadow-sm">
+                            {stats.drawBet.length <= 1 ? (<span className="text-xs sm:text-2xl font-black text-slate-100 tracking-wide truncate max-w-full" title={user.displayName}>{userAbbreviations[user.displayName] || user.displayName}</span>) : (<span className="text-xs sm:text-lg font-black text-slate-100 tracking-wide truncate max-w-full" title={user.displayName}>{userAbbreviations[user.displayName] || user.displayName}</span>)}
                             <div className="flex items-center gap-2 font-black font-mono text-base sm:text-lg">
-                              <span className="text-yellow-500 bg-yellow-500/10 px-2.5 py-0.5 rounded">{pred.homeGoals}</span>
+                              <span className="text-yellow-500 bg-yellow-500/10 px-3 py-1 rounded-xl">{pred.homeGoals}</span>
                               <span className="text-slate-650 text-xs">-</span>
-                              <span className="text-yellow-500 bg-yellow-500/10 px-2.5 py-0.5 rounded">{pred.awayGoals}</span>
+                              <span className="text-yellow-500 bg-yellow-500/10 px-3 py-1 rounded-xl">{pred.awayGoals}</span>
                             </div>
                           </div>
                         ))}
@@ -335,11 +347,13 @@ export default function MatchFlyerModal({
 
                 {/* Columna Equipo B */}
                 <div className="flex flex-col gap-2">
-                  <div className="flex flex-col items-center bg-slate-800/20 p-3 rounded-2xl relative overflow-hidden group">
+                  <div className={`flex ${isVertical ? 'flex-row items-center justify-between' : 'flex-col items-center'} bg-slate-800/20 p-3 rounded-2xl relative overflow-hidden group`}>
                     <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                    {flagV && <img src={flagV} alt={nameV} className="w-16 h-10 object-cover rounded-lg shadow-md mb-2 ring-1 ring-white/10" />}
-                    <h3 className="font-black text-sm text-center text-white">{nameV}</h3>
-                    <span className="text-[10px] font-bold text-slate-450 mt-1 uppercase tracking-widest bg-slate-950/40 px-2 py-0.5 rounded-full">
+                    <div className={`flex ${isVertical ? 'flex-row items-center gap-3 z-10' : 'flex-col items-center z-10'}`}>
+                      {flagV && <img src={flagV} alt={nameV} className={`object-cover rounded-lg shadow-md ring-1 ring-white/10 ${isVertical ? 'w-10 h-7 mb-0' : 'w-16 h-10 mb-2'}`} />}
+                      <h3 className="font-black text-sm text-center text-white">{nameV}</h3>
+                    </div>
+                    <span className={`text-[10px] font-bold text-slate-450 uppercase tracking-widest bg-slate-950/40 px-2 py-0.5 rounded-full z-10 ${isVertical ? 'mt-0' : 'mt-1'}`}>
                       {stats.awayBet.length} Votos
                     </span>
                   </div>
@@ -348,12 +362,12 @@ export default function MatchFlyerModal({
                     {stats.awayBet.length <= 3 ? (
                       <div className="flex flex-col gap-3 justify-center items-center py-4 h-full min-h-[140px]">
                         {stats.awayBet.map(({ user, pred }) => (
-                          <div key={user.uid} className="flex flex-col items-center justify-center bg-slate-950/30 px-4 py-3 rounded-xl hover:border-slate-600/30 transition-all border border-transparent w-full max-w-[200px] text-center gap-1.5 shadow-sm">
-                            {stats.awayBet.length <= 1 ? (<span className="text-xs sm:text-2xl font-black text-slate-100 tracking-wide">{user.displayName}</span>) : (<span className="text-xs sm:text-lg font-black text-slate-100 tracking-wide">{user.displayName}</span>)}
+                          <div key={user.uid} className="flex flex-col items-center justify-center bg-slate-950/30 px-4 py-3 rounded-xl transition-all w-full max-w-[200px] text-center gap-1.5 shadow-sm">
+                            {stats.awayBet.length <= 1 ? (<span className="text-xs sm:text-2xl font-black text-slate-100 tracking-wide truncate max-w-full" title={user.displayName}>{userAbbreviations[user.displayName] || user.displayName}</span>) : (<span className="text-xs sm:text-lg font-black text-slate-100 tracking-wide truncate max-w-full" title={user.displayName}>{userAbbreviations[user.displayName] || user.displayName}</span>)}
                             <div className="flex items-center gap-2 font-black font-mono text-base sm:text-lg">
-                              <span className="text-slate-400 bg-slate-950/40 px-2 py-0.5 rounded">{pred.homeGoals}</span>
+                              <span className="text-slate-400 bg-slate-950/40 px-3 py-1 rounded-xl">{pred.homeGoals}</span>
                               <span className="text-slate-600 text-xs">-</span>
-                              <span className="text-emerald-400 bg-emerald-400/10 px-2.5 py-0.5 rounded">{pred.awayGoals}</span>
+                              <span className="text-emerald-400 bg-emerald-400/10 px-3 py-1 rounded-xl">{pred.awayGoals}</span>
                             </div>
                           </div>
                         ))}
