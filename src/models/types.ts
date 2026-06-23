@@ -4,6 +4,9 @@ export interface Usuario {
   email: string;
   totalPoints: number;
   role: 'admin' | 'user';
+  exactHits?: number;
+  goalHits?: number;
+  outcomeHits?: number;
 }
 
 export interface Partido {

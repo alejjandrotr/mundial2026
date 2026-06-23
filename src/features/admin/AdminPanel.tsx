@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, doc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { Partido, Usuario } from '../../models/types';
 import { getCachedMatches, getCachedUsers, clearCache } from '../../utils/cache';
@@ -23,8 +23,13 @@ export default function AdminPanel() {
   const [scraperLogs, setScraperLogs] = useState<string[]>([]);
   const [scrapedData, setScrapedData] = useState<{ home: number; away: number } | null>(null);
 
+  // Edit Time State
+  const [kickoffTimeStr, setKickoffTimeStr] = useState<string>('');
+  const [updatingTime, setUpdatingTime] = useState(false);
+
   // Points Show Modal State
   const [showPointsModal, setShowPointsModal] = useState(false);
+  const [bypassDistribution, setBypassDistribution] = useState(false);
 
   const loadData = async (forceRefresh = false) => {
     try {
@@ -64,6 +69,11 @@ export default function AdminPanel() {
         setHomeGoals(firstMatch.homeGoals !== null ? String(firstMatch.homeGoals) : '0');
         setAwayGoals(firstMatch.awayGoals !== null ? String(firstMatch.awayGoals) : '0');
         setMatchStatus(firstMatch.status || 'finished');
+        
+        const d = firstMatch.kickoffTime?.toDate ? firstMatch.kickoffTime.toDate() : new Date(firstMatch.kickoffTime);
+        const tzOffset = d.getTimezoneOffset() * 60000;
+        const localISOTime = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+        setKickoffTimeStr(localISOTime);
       }
 
     } catch (err) {
@@ -86,6 +96,28 @@ export default function AdminPanel() {
       setMatchStatus(match.status || 'finished');
       setScrapedData(null);
       setScraperLogs([]);
+
+      const d = match.kickoffTime?.toDate ? match.kickoffTime.toDate() : new Date(match.kickoffTime);
+      const tzOffset = d.getTimezoneOffset() * 60000;
+      const localISOTime = new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+      setKickoffTimeStr(localISOTime);
+    }
+  };
+
+  const handleUpdateTime = async () => {
+    if (!selectedMatchId || !kickoffTimeStr) return;
+    try {
+      setUpdatingTime(true);
+      const matchRef = doc(db, 'partidos', selectedMatchId);
+      const newDate = new Date(kickoffTimeStr);
+      await updateDoc(matchRef, { kickoffTime: newDate });
+      alert('¡Fecha y hora del partido actualizadas correctamente!');
+      loadData(true);
+    } catch (e) {
+      console.error(e);
+      alert('Hubo un error actualizando la fecha y hora.');
+    } finally {
+      setUpdatingTime(false);
     }
   };
 
@@ -123,12 +155,38 @@ export default function AdminPanel() {
   };
 
   // Trigger Point distribution overlay
-  const handleOpenShow = (e: React.FormEvent) => {
+  const handleOpenShow = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMatchId) return;
     
-    // Open points show modal
-    setShowPointsModal(true);
+    if (bypassDistribution) {
+      const pwd = prompt("Ingrese la contraseña de administrador:");
+      if (pwd !== 'admin') {
+        alert("Contraseña incorrecta o cancelada. Operación cancelada.");
+        return;
+      }
+      
+      try {
+        const matchRef = doc(db, 'partidos', selectedMatchId);
+        await updateDoc(matchRef, {
+          homeGoals: parseInt(homeGoals, 10),
+          awayGoals: parseInt(awayGoals, 10),
+          status: matchStatus
+        });
+        
+        clearCache();
+        setScrapedData(null);
+        setScraperLogs([]);
+        await loadData(true);
+        alert('¡Marcador y estado del partido guardados correctamente (sin modificar puntos)!');
+      } catch (err) {
+        console.error('Error al guardar datos directamente:', err);
+        alert('Hubo un error al guardar el partido.');
+      }
+    } else {
+      // Open points show modal
+      setShowPointsModal(true);
+    }
   };
 
   // Commit points & match scores to Firestore
@@ -240,6 +298,26 @@ export default function AdminPanel() {
 
               {selectedMatch && (
                 <>
+                  {/* Edit Match Time */}
+                  <div className="flex items-end gap-3 bg-slate-950/40 p-3 rounded-2xl border border-slate-800">
+                    <div className="flex-1 space-y-1.5">
+                      <label className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Fecha y Hora de Inicio:</label>
+                      <input
+                        type="datetime-local"
+                        value={kickoffTimeStr}
+                        onChange={(e) => setKickoffTimeStr(e.target.value)}
+                        className="w-full bg-slate-900 border border-slate-750 text-white rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleUpdateTime}
+                      disabled={updatingTime}
+                      className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition-colors border border-slate-700 disabled:opacity-50"
+                    >
+                      {updatingTime ? 'Guardando...' : 'Actualizar Hora'}
+                    </button>
+                  </div>
                   {/* Web Scraper Action Panel */}
                   <div className="bg-slate-950/50 border border-slate-850 rounded-2xl p-4 space-y-3">
                     <div className="flex justify-between items-center">
@@ -340,6 +418,21 @@ export default function AdminPanel() {
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Bypass point distribution checkbox */}
+                  <div className="flex items-center gap-2 bg-slate-950/40 p-3.5 rounded-xl border border-slate-850">
+                    <input
+                      type="checkbox"
+                      id="bypass-distribution"
+                      checked={bypassDistribution}
+                      onChange={(e) => setBypassDistribution(e.target.checked)}
+                      disabled={isFutureMatch}
+                      className="w-4 h-4 rounded border-slate-800 bg-slate-900 text-emerald-500 focus:ring-emerald-500/20 focus:ring-offset-slate-950 cursor-pointer"
+                    />
+                    <label htmlFor="bypass-distribution" className="text-xs text-slate-350 font-bold cursor-pointer select-none leading-tight">
+                      Solo guardar marcador/estado (NO distribuir ni re-sumar puntos)
+                    </label>
                   </div>
 
                   {/* Submit Button */}

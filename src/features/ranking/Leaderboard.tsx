@@ -1,34 +1,70 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, onSnapshot, getDocs, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { Usuario, Partido } from '../../models/types';
-import { Medal, Trophy, Share2, Calendar, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Medal, Trophy, Share2, Calendar, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { calculateMatchPoints } from '../../utils/scoring';
 import { toTitleCase } from '../../utils/format';
 
 export default function Leaderboard() {
   const [users, setUsers] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
-  const [totalMatches, setTotalMatches] = useState<number>(0);
-  const [predictionsCount, setPredictionsCount] = useState<Record<string, number>>({});
+  const [matches, setMatches] = useState<Partido[]>([]);
+  const [predictions, setPredictions] = useState<Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>>>({});
 
-  const shareOnWhatsApp = () => {
-    if (users.length === 0) return;
-
-    let text = `🏆 *Tabla de Posiciones - Quiniela Mundial 2026* 🏆\n\n`;
-    users.slice(0, 20).forEach((user, idx) => {
-      const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
-      text += `${medal} *${user.displayName.trim()}* - ${user.totalPoints} pts\n`;
+  // Calcular aciertos exactos e individuales de goles de cada usuario en base a partidos jugados y predicciones reales
+  const computedUsers = useMemo(() => {
+    const calculated = users.map(user => {
+      const userPreds = predictions[user.uid] || {};
+      let exactHits = 0;
+      let goalHits = 0;
+      matches.forEach(match => {
+        if (match.status === 'finished' && match.homeGoals !== null && match.awayGoals !== null) {
+          const pred = userPreds[match.id];
+          if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
+            // Acierto exacto de marcador
+            if (pred.homeGoals === match.homeGoals && pred.awayGoals === match.awayGoals) {
+              exactHits++;
+            }
+            // Aciertos individuales de goles (goles de local y/o goles de visitante)
+            if (pred.homeGoals === match.homeGoals) goalHits++;
+            if (pred.awayGoals === match.awayGoals) goalHits++;
+          }
+        }
+      });
+      return {
+        ...user,
+        exactHits,
+        goalHits
+      };
     });
 
-    text += `\n¡Sigue y simula tus resultados aquí!\n${window.location.origin}`;
+    // Ordenar por puntos (desc) y luego por aciertos de goles individuales (desc) como desempate
+    return calculated.sort((a, b) => {
+      if (b.totalPoints !== a.totalPoints) {
+        return b.totalPoints - a.totalPoints;
+      }
+      return b.goalHits - a.goalHits;
+    });
+  }, [users, matches, predictions]);
+
+  const shareOnWhatsApp = () => {
+    if (computedUsers.length === 0) return;
+
+    let text = `🏆 *Tabla de Posiciones - Quiniela Mundial 2026* 🏆\n\n`;
+    computedUsers.slice(0, 20).forEach((user, idx) => {
+      const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
+      text += `${medal} *${user.displayName.trim()}* - ${user.totalPoints} pts (${user.goalHits} AG, ${user.exactHits} ME)\n`;
+    });
+
+    text += `\n*AG: Acierto de Goles (Desempate)\n*ME: Marcadores Exactos (Top alternativo)\n\n¡Sigue y simula tus resultados aquí!\n${window.location.origin}`;
 
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
     window.open(url, '_blank');
   };
 
   const shareTodaySummary = async () => {
-    if (users.length === 0) return;
+    if (computedUsers.length === 0) return;
 
     try {
       // 1. Fetch matches
@@ -69,7 +105,7 @@ export default function Leaderboard() {
       const predictionsSnap = await getDocs(predQuery);
 
       const userTodayPoints: Record<string, number> = {};
-      users.forEach(u => {
+      computedUsers.forEach(u => {
         userTodayPoints[u.uid] = 0;
       });
 
@@ -98,7 +134,7 @@ export default function Leaderboard() {
 
       const sortedToday = Object.entries(userTodayPoints)
         .map(([uid, pts]) => ({
-          user: users.find(u => u.uid === uid),
+          user: computedUsers.find(u => u.uid === uid),
           points: pts
         }))
         .filter(item => item.user && item.points > 0)
@@ -113,9 +149,9 @@ export default function Leaderboard() {
       }
 
       text += `\n🏆 *Tabla General Acumulada:* \n`;
-      users.slice(0, 10).forEach((user, idx) => {
+      computedUsers.slice(0, 10).forEach((user, idx) => {
         const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
-        text += `${medal} *${user.displayName.trim()}* - ${user.totalPoints} pts\n`;
+        text += `${medal} *${user.displayName.trim()}* - ${user.totalPoints} pts (${user.goalHits} AG, ${user.exactHits} ME)\n`;
       });
 
       text += `\n¡Sigue y simula tus resultados aquí!\n${window.location.origin}`;
@@ -129,14 +165,20 @@ export default function Leaderboard() {
   };
 
   useEffect(() => {
-    // 1. Fetch total matches count once
-    getDocs(collection(db, 'partidos'))
-      .then((snapshot) => {
-        setTotalMatches(snapshot.size);
-      })
-      .catch((err) => console.error('Error fetching matches count:', err));
+    // 1. Escuchar partidos
+    const unsubscribeMatches = onSnapshot(collection(db, 'partidos'), (snapshot) => {
+      const matchesData: Partido[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        matchesData.push({
+          ...data,
+          kickoffTime: data.kickoffTime?.toDate ? data.kickoffTime.toDate() : new Date(data.kickoffTime)
+        } as Partido);
+      });
+      setMatches(matchesData);
+    });
 
-    // 2. Listen to users
+    // 2. Escuchar usuarios
     const q = query(collection(db, 'usuarios'), orderBy('totalPoints', 'desc'));
     const unsubscribeUsers = onSnapshot(q, (snapshot) => {
       const usersData: Usuario[] = [];
@@ -151,26 +193,111 @@ export default function Leaderboard() {
       setLoading(false);
     });
 
-    // 3. Listen to predictions to calculate completion counts
+    // 3. Escuchar predicciones
     const unsubscribePreds = onSnapshot(collection(db, 'predicciones'), (snapshot) => {
-      const counts: Record<string, number> = {};
+      const predsMap: Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>> = {};
+      
       snapshot.forEach((doc) => {
         const data = doc.data();
+        const userId = data.usuarioId;
+        const matchId = data.partidoId;
         const homeG = data.homeGoals;
         const awayG = data.awayGoals;
-        // Count as filled if both values are valid numbers or strings and not empty/null
-        if (homeG !== null && awayG !== null && homeG !== '' && awayG !== '') {
-          counts[data.usuarioId] = (counts[data.usuarioId] || 0) + 1;
-        }
+
+        if (!predsMap[userId]) predsMap[userId] = {};
+        predsMap[userId][matchId] = {
+          homeGoals: homeG !== undefined ? homeG : null,
+          awayGoals: awayG !== undefined ? awayG : null,
+        };
       });
-      setPredictionsCount(counts);
+      setPredictions(predsMap);
     });
 
     return () => {
+      unsubscribeMatches();
       unsubscribeUsers();
       unsubscribePreds();
     };
   }, []);
+
+  // Calcular cambios de puestos desde el último partido finalizado
+  const rankDifferences = useMemo(() => {
+    const diffs: Record<string, number> = {};
+    if (computedUsers.length === 0) return diffs;
+
+    // Inicializar diferencias en 0
+    computedUsers.forEach(u => {
+      diffs[u.uid] = 0;
+    });
+
+    // 1. Obtener partidos terminados, ordenados de más reciente a más antiguo
+    const finishedMatches = matches
+      .filter(m => m.status === 'finished')
+      .sort((a, b) => new Date(b.kickoffTime).getTime() - new Date(a.kickoffTime).getTime());
+
+    if (finishedMatches.length === 0) {
+      return diffs;
+    }
+
+    // 2. El último partido finalizado es la referencia
+    const latestMatch = finishedMatches[0];
+
+    // 3. Calcular los puntos y aciertos previos al último partido finalizado para cada usuario
+    const prevUserData = computedUsers.map(user => {
+      const userPreds = predictions[user.uid] || {};
+      const pred = userPreds[latestMatch.id];
+      let lastMatchPoints = 0;
+      let lastMatchGoalHits = 0;
+      let lastMatchExactHit = 0;
+      
+      if (
+        pred && 
+        pred.homeGoals !== null && 
+        pred.awayGoals !== null && 
+        latestMatch.homeGoals !== null && 
+        latestMatch.awayGoals !== null
+      ) {
+        const scoreResult = calculateMatchPoints(
+          pred.homeGoals, 
+          pred.awayGoals, 
+          latestMatch.homeGoals, 
+          latestMatch.awayGoals
+        );
+        lastMatchPoints = scoreResult.points;
+        if (pred.homeGoals === latestMatch.homeGoals) lastMatchGoalHits++;
+        if (pred.awayGoals === latestMatch.awayGoals) lastMatchGoalHits++;
+        if (pred.homeGoals === latestMatch.homeGoals && pred.awayGoals === latestMatch.awayGoals) {
+          lastMatchExactHit = 1;
+        }
+      }
+      return {
+        uid: user.uid,
+        prevPoints: user.totalPoints - lastMatchPoints,
+        prevGoalHits: (user.goalHits || 0) - lastMatchGoalHits,
+        prevExactHits: (user.exactHits || 0) - lastMatchExactHit
+      };
+    });
+
+    // 4. Ordenar usuarios según los puntos previos para obtener el ranking anterior
+    const sortedPrev = [...prevUserData].sort((a, b) => {
+      if (b.prevPoints !== a.prevPoints) {
+        return b.prevPoints - a.prevPoints;
+      }
+      return b.prevGoalHits - a.prevGoalHits;
+    });
+
+    // 5. Comparar el puesto actual con el puesto anterior
+    computedUsers.forEach((user, currentIdx) => {
+      const currentRank = currentIdx + 1;
+      const prevRankIdx = sortedPrev.findIndex(u => u.uid === user.uid);
+      const prevRank = prevRankIdx !== -1 ? prevRankIdx + 1 : currentRank;
+      
+      // Si prevRank era 5 (puesto peor) y currentRank es 3 (puesto mejor), la diferencia es 5 - 3 = +2 (subió 2 puestos)
+      diffs[user.uid] = prevRank - currentRank;
+    });
+
+    return diffs;
+  }, [matches, predictions, computedUsers]);
 
   if (loading) {
     return <div className="text-slate-400 text-center py-8">Cargando posiciones...</div>;
@@ -178,13 +305,23 @@ export default function Leaderboard() {
 
   return (
     <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl overflow-hidden backdrop-blur-sm">
-      <div className="bg-slate-800/80 p-4 border-b border-slate-700/50 flex items-center gap-2">
-        <Trophy className="w-5 h-5 text-yellow-500" />
-        <h2 className="text-lg font-bold text-white">Tabla de Posiciones</h2>
+      <div className="bg-slate-800/80 p-4 border-b border-slate-700/50 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Trophy className="w-5 h-5 text-yellow-500" />
+          <h2 className="text-lg font-bold text-white">Tabla de Posiciones</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] text-sky-400 bg-sky-950/30 px-2 py-0.5 rounded border border-sky-500/20 font-semibold">
+            AG: Acierto de Goles (Desempate)
+          </span>
+          <span className="text-[10px] text-amber-400 bg-amber-950/30 px-2 py-0.5 rounded border border-amber-500/20 font-semibold">
+            ME: Marcador Exacto (Top)
+          </span>
+        </div>
       </div>
 
       <div className="divide-y divide-slate-700/30">
-        {users.map((user, index) => {
+        {computedUsers.map((user, index) => {
           const rank = index + 1;
           let rankIcon = null;
           let rankColor = "text-slate-400";
@@ -202,31 +339,29 @@ export default function Leaderboard() {
             rankIcon = <span className={`w-5 text-center font-mono text-sm ${rankColor}`}>{rank}</span>;
           }
 
-          const predCount = predictionsCount[user.uid] || 0;
+          const rankDiff = rankDifferences[user.uid] || 0;
           let badge = null;
-          if (totalMatches > 0) {
-            if (predCount === 0) {
-              badge = (
-                <span className="inline-flex items-center gap-1 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold px-2 py-0.5 rounded-full" title="No ha llenado la quiniela">
-                  <AlertCircle className="w-3 h-3" />
-                  <span>0/{totalMatches}</span>
-                </span>
-              );
-            } else if (predCount < totalMatches) {
-              badge = (
-                <span className="inline-flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-full" title="Quiniela parcialmente llena">
-                  <Clock className="w-3 h-3" />
-                  <span>{predCount}/{totalMatches}</span>
-                </span>
-              );
-            } else {
-              badge = (
-                <span className="inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full" title="Quiniela completa">
-                  <CheckCircle2 className="w-3 h-3" />
-                  <span>Listo</span>
-                </span>
-              );
-            }
+          if (rankDiff > 0) {
+            badge = (
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" title={`Subió ${rankDiff} puesto(s) desde el último partido`}>
+                <ArrowUp className="w-2.5 h-2.5" />
+                <span>{rankDiff}</span>
+              </span>
+            );
+          } else if (rankDiff < 0) {
+            badge = (
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20" title={`Bajó ${Math.abs(rankDiff)} puesto(s) desde el último partido`}>
+                <ArrowDown className="w-2.5 h-2.5" />
+                <span>{Math.abs(rankDiff)}</span>
+              </span>
+            );
+          } else {
+            badge = (
+              <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-500 border border-slate-700/50" title="Mantuvo su puesto desde el último partido">
+                <Minus className="w-2.5 h-2.5" />
+                <span>0</span>
+              </span>
+            );
           }
 
           return (
@@ -244,23 +379,33 @@ export default function Leaderboard() {
                   </div>
                 </div>
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className={`text-xl ${rank <= 3 ? rankColor : 'text-emerald-400 font-semibold'}`}>
-                  {user.totalPoints}
-                </span>
-                <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">pts</span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-baseline gap-1 text-right">
+                  <span className={`text-xl ${rank <= 3 ? rankColor : 'text-emerald-400 font-semibold'}`}>
+                    {user.totalPoints}
+                  </span>
+                  <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">pts</span>
+                </div>
+                <div className="flex flex-col items-center justify-center bg-slate-900/60 px-2 py-0.5 rounded border border-slate-700/40 min-w-[44px]" title="Aciertos de goles individuales (Criterio de desempate)">
+                  <span className="text-xs font-bold text-sky-400">{user.goalHits}</span>
+                  <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tight">AG</span>
+                </div>
+                <div className="flex flex-col items-center justify-center bg-slate-900/40 px-2 py-0.5 rounded border border-slate-700/20 min-w-[44px]" title="Marcadores exactos acertados (Top alternativo)">
+                  <span className="text-xs font-bold text-amber-500">{user.exactHits}</span>
+                  <span className="text-[8px] text-slate-450 font-bold uppercase tracking-tight">ME</span>
+                </div>
               </div>
             </div>
           );
         })}
-        {users.length === 0 && (
+        {computedUsers.length === 0 && (
           <div className="p-8 text-center text-slate-500">
             Aún no hay participantes registrados.
           </div>
         )}
       </div>
 
-      {users.length > 0 && (
+      {computedUsers.length > 0 && (
         <div className="bg-slate-900/60 p-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-center gap-2.5">
           <button
             onClick={shareTodaySummary}

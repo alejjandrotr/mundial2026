@@ -405,7 +405,7 @@ export default function ComparisonGrid() {
             <table className="w-full text-left border-collapse text-xs select-none">
               <thead className="sticky top-0 z-20 bg-slate-900/95 border-b border-slate-700/60 backdrop-blur-md">
                 <tr>
-                  <th className="py-3.5 px-4 font-bold text-slate-300 min-w-44 sticky left-0 bg-slate-900/98 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
+                  <th className="py-3.5 px-4 font-bold text-slate-300 min-w-44 sticky left-0 z-30 bg-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.3)]">
                     Partidos
                   </th>
                   <th className="py-3.5 px-3 font-bold text-center text-slate-300 min-w-28 bg-slate-900/95">
@@ -435,7 +435,7 @@ export default function ComparisonGrid() {
                   return (
                     <tr key={match.id} className="hover:bg-slate-800/10 transition-colors">
                       {/* Match Name Column (Sticky left) */}
-                      <td className="py-3 px-4 font-bold text-slate-200 sticky left-0 bg-slate-900/90 shadow-[2px_0_5px_rgba(0,0,0,0.25)] flex items-center gap-2 justify-between">
+                      <td className="py-3 px-4 font-bold text-slate-200 sticky left-0 z-10 bg-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.25)] flex items-center gap-2 justify-between">
                         <div 
                           className="truncate pr-2 cursor-pointer hover:text-white transition-colors flex-1"
                           onClick={() => setSelectedMatchForFlyer(match)}

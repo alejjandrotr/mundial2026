@@ -33,13 +33,13 @@ export default function WhatIfSimulator() {
   const [predictions, setPredictions] = useState<Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>>>({});
 
   const sortedUsers = useMemo(() => {
-    if (!currentUser) return users;
-    const currentIdx = users.findIndex((u) => u.uid === currentUser.uid);
-    if (currentIdx === -1) return users;
-    const result = [...users];
+    if (!currentUser) return realSortedUsers;
+    const currentIdx = realSortedUsers.findIndex((u) => u.uid === currentUser.uid);
+    if (currentIdx === -1) return realSortedUsers;
+    const result = [...realSortedUsers];
     const [me] = result.splice(currentIdx, 1);
     return [me, ...result];
-  }, [users, currentUser]);
+  }, [realSortedUsers, currentUser]);
 
   // Local simulated matches state
   const [simulatedMatches, setSimulatedMatches] = useState<Record<string, SimulatedMatchState>>({});
@@ -118,12 +118,46 @@ export default function WhatIfSimulator() {
     setSimulatedMatches(resetState);
   };
 
-  // Calculate simulated points for each user
-  const userSimulatedPoints = useMemo(() => {
-    const points: Record<string, number> = {};
+  // Calcular los aciertos reales para cada usuario para tener el ranking real de referencia correcto
+  const realSortedUsers = useMemo(() => {
+    const calculated = users.map(user => {
+      const userPreds = predictions[user.uid] || {};
+      let exactHits = 0;
+      let goalHits = 0;
+      matches.forEach(match => {
+        if (match.status === 'finished' && match.homeGoals !== null && match.awayGoals !== null) {
+          const pred = userPreds[match.id];
+          if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
+            if (pred.homeGoals === match.homeGoals && pred.awayGoals === match.awayGoals) {
+              exactHits++;
+            }
+            if (pred.homeGoals === match.homeGoals) goalHits++;
+            if (pred.awayGoals === match.awayGoals) goalHits++;
+          }
+        }
+      });
+      return {
+        ...user,
+        exactHits,
+        goalHits
+      };
+    });
+
+    // Ordenar por puntos reales (desc) y luego por aciertos de goles individuales reales (desc)
+    return calculated.sort((a, b) => {
+      if (b.totalPoints !== a.totalPoints) {
+        return b.totalPoints - a.totalPoints;
+      }
+      return b.goalHits - a.goalHits;
+    });
+  }, [users, matches, predictions]);
+
+  // Calcular puntos simulados y aciertos exactos e individuales simulados para cada usuario
+  const userSimulatedStats = useMemo(() => {
+    const stats: Record<string, { simPoints: number; simExactHits: number; simGoalHits: number }> = {};
     
     users.forEach((u) => {
-      points[u.uid] = 0;
+      stats[u.uid] = { simPoints: 0, simExactHits: 0, simGoalHits: 0 };
     });
 
     Object.values(simulatedMatches).forEach((sm) => {
@@ -137,37 +171,47 @@ export default function WhatIfSimulator() {
           
           if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
             const result = calculateMatchPoints(pred.homeGoals, pred.awayGoals, homeG, awayG);
-            points[user.uid] += result.points;
+            stats[user.uid].simPoints += result.points;
+            if (pred.homeGoals === homeG && pred.awayGoals === awayG) {
+              stats[user.uid].simExactHits += 1;
+            }
+            if (pred.homeGoals === homeG) stats[user.uid].simGoalHits += 1;
+            if (pred.awayGoals === awayG) stats[user.uid].simGoalHits += 1;
           }
         });
       }
     });
 
-    return points;
+    return stats;
   }, [simulatedMatches, users, predictions]);
 
   // Derive the simulated leaderboard with rank comparison
   const simulatedLeaderboard = useMemo(() => {
     const realRanks: Record<string, number> = {};
-    users.forEach((u, idx) => {
+    realSortedUsers.forEach((u, idx) => {
       realRanks[u.uid] = idx + 1;
     });
 
-    const mapped = users.map((u) => {
-      const simPoints = userSimulatedPoints[u.uid] ?? 0;
+    const mapped = realSortedUsers.map((u) => {
+      const stats = userSimulatedStats[u.uid] || { simPoints: 0, simExactHits: 0, simGoalHits: 0 };
       return {
         ...u,
-        simPoints,
+        simPoints: stats.simPoints,
+        simExactHits: stats.simExactHits,
+        simGoalHits: stats.simGoalHits,
         realRank: realRanks[u.uid],
       };
     });
 
-    // Sort by simulated points. Tie breaker: real rank.
+    // Ordenar por puntos simulados (desc) y luego por aciertos de goles individuales simulados (desc)
     mapped.sort((a, b) => {
       if (b.simPoints !== a.simPoints) {
         return b.simPoints - a.simPoints;
       }
-      return a.realRank - b.realRank;
+      if (b.simGoalHits !== a.simGoalHits) {
+        return b.simGoalHits - a.simGoalHits;
+      }
+      return a.realRank - b.realRank; // Desempate adicional por ranking real previo
     });
 
     return mapped.map((u, idx) => {
@@ -179,7 +223,7 @@ export default function WhatIfSimulator() {
         rankDiff,
       };
     });
-  }, [users, userSimulatedPoints]);
+  }, [realSortedUsers, userSimulatedStats]);
 
   if (loading) {
     return (
@@ -244,7 +288,7 @@ export default function WhatIfSimulator() {
               <table className="w-full text-left border-collapse text-xs select-none">
                 <thead className="sticky top-0 z-20 bg-slate-900/95 border-b border-slate-700/60 backdrop-blur-md">
                   <tr>
-                    <th className="py-3.5 px-4 font-bold text-slate-300 min-w-44 sticky left-0 bg-slate-900/98 shadow-[2px_0_5px_rgba(0,0,0,0.3)] z-30">
+                    <th className="py-3.5 px-4 font-bold text-slate-300 min-w-44 sticky left-0 bg-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.3)] z-30">
                       Partidos
                     </th>
                     <th className="py-3.5 px-3 font-bold text-center text-indigo-300 min-w-32 bg-slate-900/95 z-20 border-l border-indigo-500/20 shadow-[inset_0_0_15px_rgba(79,70,229,0.05)]">
@@ -258,8 +302,12 @@ export default function WhatIfSimulator() {
                             <span className={`font-semibold truncate max-w-28 ${isSelf ? 'text-indigo-300 font-extrabold' : 'text-slate-100'}`}>
                               {user.displayName} {isSelf && '(Tú)'}
                             </span>
-                            <span className="text-[10px] text-indigo-400 font-mono font-bold mt-0.5">{userSimulatedPoints[user.uid] || 0} pts simulados</span>
-                            <span className="text-[9px] text-slate-500 font-mono">Real: {user.totalPoints || 0} pts</span>
+                             <span className="text-[10px] text-indigo-400 font-mono font-bold mt-0.5">
+                              {userSimulatedStats[user.uid]?.simPoints || 0} pts ({userSimulatedStats[user.uid]?.simGoalHits || 0} AG, {userSimulatedStats[user.uid]?.simExactHits || 0} ME)
+                            </span>
+                            <span className="text-[9px] text-slate-500 font-mono">
+                              Real: {user.totalPoints || 0} pts ({user.goalHits || 0} AG, {user.exactHits || 0} ME)
+                            </span>
                           </div>
                         </th>
                       );
@@ -277,7 +325,7 @@ export default function WhatIfSimulator() {
                     return (
                       <tr key={match.id} className="hover:bg-slate-800/10 transition-colors">
                         {/* Match Name Column */}
-                        <td className="py-3 px-4 font-bold text-slate-200 sticky left-0 bg-slate-900/90 shadow-[2px_0_5px_rgba(0,0,0,0.25)] flex items-center gap-2 justify-between z-10">
+                        <td className="py-3 px-4 font-bold text-slate-200 sticky left-0 bg-slate-900 shadow-[2px_0_5px_rgba(0,0,0,0.25)] flex items-center gap-2 justify-between z-10">
                           <div className="truncate pr-2 flex items-center gap-1">
                             <span 
                               className="cursor-help bg-slate-850 border border-slate-700/50 text-slate-400 text-[10px] font-mono px-1.5 py-0.5 rounded mr-1 uppercase flex items-center gap-1"
@@ -498,18 +546,28 @@ export default function WhatIfSimulator() {
                           {user.displayName}
                         </span>
                         <span className="text-[9px] text-slate-500 font-mono mt-0.5">
-                          Real: {user.realRank}º ({user.totalPoints} pts)
+                          Real: {user.realRank}º ({user.totalPoints} pts, {user.goalHits || 0} AG, {user.exactHits || 0} ME)
                         </span>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2.5 flex-shrink-0">
                       {variationBadge}
-                      <div className="flex flex-col items-end">
-                        <span className={`text-sm font-black font-mono ${rank <= 3 ? rankColor : 'text-indigo-400'}`}>
-                          {user.simPoints}
-                        </span>
-                        <span className="text-[8px] text-slate-500 uppercase tracking-widest font-semibold">pts</span>
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex flex-col items-end">
+                          <span className={`text-sm font-black font-mono ${rank <= 3 ? rankColor : 'text-indigo-400'}`}>
+                            {user.simPoints}
+                          </span>
+                          <span className="text-[8px] text-slate-500 uppercase tracking-widest font-semibold">pts</span>
+                        </div>
+                        <div className="flex flex-col items-center justify-center bg-slate-900/60 px-1 py-0.5 rounded border border-slate-700/40 min-w-[28px]" title="Aciertos de Goles simulados (Desempate)">
+                          <span className="text-[10px] font-bold text-sky-400">{user.simGoalHits}</span>
+                          <span className="text-[7px] text-slate-400 font-bold uppercase tracking-tight">AG</span>
+                        </div>
+                        <div className="flex flex-col items-center justify-center bg-slate-900/40 px-1 py-0.5 rounded border border-slate-700/20 min-w-[28px]" title="Marcadores exactos acertados simulados (Top)">
+                          <span className="text-[10px] font-bold text-amber-500">{user.simExactHits}</span>
+                          <span className="text-[7px] text-slate-450 font-bold uppercase tracking-tight">ME</span>
+                        </div>
                       </div>
                     </div>
                   </div>

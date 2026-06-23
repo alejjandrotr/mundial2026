@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { LogOut, Trophy, Database, Gamepad2, Play, Table, Settings, Lock, Unlock, KeyRound } from 'lucide-react';
+import { LogOut, Trophy, Database, Gamepad2, Play, Table, Settings, Lock, Unlock, KeyRound, Award } from 'lucide-react';
 import Leaderboard from '../features/ranking/Leaderboard';
 import MatchList from '../features/matches/MatchList';
 import QuinielaForm from '../features/predictions/QuinielaForm';
 import ComparisonGrid from '../features/predictions/ComparisonGrid';
 import AdminPanel from '../features/admin/AdminPanel';
 import DangerZone from '../features/admin/DangerZone';
+import QualifiersView from '../features/predictions/QualifiersView';
+import RecordsView from '../features/ranking/RecordsView';
 import { seedMockMatches, simulateRealScores } from '../utils/seed';
 
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'live' | 'quiniela' | 'comparison' | 'admin'>('quiniela');
+  const [activeTab, setActiveTab] = useState<'live' | 'quiniela' | 'comparison' | 'admin' | 'clasificados' | 'records'>('quiniela');
   const quinielaGroup = 'A';
 
   const [devUnlocked, setDevUnlocked] = useState(false);
@@ -78,10 +80,10 @@ export default function Dashboard() {
 
       <main className="max-w-full xl:max-w-[1600px] mx-auto relative">
         {/* Selector de Pestañas Principal */}
-        <div className="no-print flex bg-slate-900/60 border border-slate-800/70 p-1.5 rounded-2xl backdrop-blur-md max-w-xl mb-8 gap-1 shadow-inner">
+        <div className="no-print flex bg-slate-900/60 border border-slate-800/70 p-1.5 rounded-2xl backdrop-blur-md max-w-3xl mb-8 gap-1 shadow-inner flex-wrap md:flex-nowrap">
           <button
             onClick={() => setActiveTab('quiniela')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[100px] ${
               activeTab === 'quiniela'
                 ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
@@ -93,7 +95,7 @@ export default function Dashboard() {
           
           <button
             onClick={() => setActiveTab('comparison')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[110px] ${
               activeTab === 'comparison'
                 ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
@@ -105,7 +107,7 @@ export default function Dashboard() {
 
           <button
             onClick={() => setActiveTab('live')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[110px] ${
               activeTab === 'live'
                 ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
@@ -116,8 +118,32 @@ export default function Dashboard() {
           </button>
 
           <button
+            onClick={() => setActiveTab('clasificados')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[110px] ${
+              activeTab === 'clasificados'
+                ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+            }`}
+          >
+            <Trophy className="w-4 h-4" />
+            Clasificados
+          </button>
+
+          <button
+            onClick={() => setActiveTab('records')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[90px] ${
+              activeTab === 'records'
+                ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+            }`}
+          >
+            <Award className="w-4 h-4" />
+            Records
+          </button>
+
+          <button
             onClick={() => setActiveTab('admin')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+            className={`flex flex-1 items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[90px] ${
               activeTab === 'admin'
                 ? 'bg-worldcup-green text-slate-950 shadow-[0_0_15px_rgba(0,245,118,0.35)] font-black scale-[1.02]'
                 : 'text-worldcup-green hover:bg-worldcup-green/5 border border-transparent hover:border-worldcup-green/10'
@@ -135,6 +161,14 @@ export default function Dashboard() {
 
         {activeTab === 'comparison' && (
           <ComparisonGrid />
+        )}
+
+        {activeTab === 'clasificados' && (
+          <QualifiersView />
+        )}
+
+        {activeTab === 'records' && (
+          <RecordsView />
         )}
 
         {activeTab === 'live' && (

@@ -41,11 +41,21 @@ export default function TodayMatchesFlyerModal({
     };
   }, []);
 
-  // Filtrar partidos de hoy (basado en la fecha del partido)
+  // Helper para obtener string de fecha local YYYY-MM-DD
+  const getLocalDateString = (dateInput: any) => {
+    const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+    if (isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Filtrar partidos de hoy (basado en la fecha del partido en hora local)
   const todayMatches = useMemo(() => {
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = getLocalDateString(new Date());
     return matches.filter(m => {
-      const matchDateStr = new Date(m.kickoffTime).toISOString().slice(0, 10);
+      const matchDateStr = getLocalDateString(m.kickoffTime);
       return matchDateStr === todayStr;
     });
   }, [matches]);
@@ -191,7 +201,7 @@ export default function TodayMatchesFlyerModal({
                 🏆 Partidos de Hoy
               </h1>
               <p className="text-slate-400 text-xs font-medium font-mono">
-                {new Date('2026-06-11').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
               </p>
             </div>
 
