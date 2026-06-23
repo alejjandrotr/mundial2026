@@ -2,8 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import type { Partido, Usuario } from '../../models/types';
 import { getCachedMatches, getCachedUsers, getCachedPredictions } from '../../utils/cache';
 import { calculateAllGroupStandings, getBestThirdPlaceTeams, isGroupComplete } from '../../utils/standings';
-import type { TeamStanding } from '../../utils/standings';
-import { Loader2, Users, Trophy, ChevronDown, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Users, Trophy, ChevronDown } from 'lucide-react';
 import { getFlagUrl } from '../../utils/flags';
 
 export default function QualifiersView() {
@@ -134,7 +133,7 @@ export default function QualifiersView() {
 
   const selectedUser = users.find(u => u.uid === selectedUserId);
 
-  const getStatusColor = (userTeam: string, offTeam: string, isResolved: boolean, type: '1st' | '2nd' | '3rd') => {
+  const getStatusColor = (userTeam: string, offTeam: string, isResolved: boolean) => {
     if (!userTeam) return 'bg-slate-800/50 text-slate-500 border-slate-700/50';
     if (!isResolved) return 'bg-slate-700/30 text-slate-300 border-slate-600/50'; // Gris
     
@@ -166,7 +165,7 @@ export default function QualifiersView() {
     const userTeamName = userTeamObj?.team || 'Sin predicción';
     const isResolved = offTeamObj ? offTeamObj.isResolved : false;
 
-    const colorClass = getStatusColor(userTeamObj?.team || '', offTeamObj?.team || '', isResolved, type);
+    const colorClass = getStatusColor(userTeamObj?.team || '', offTeamObj?.team || '', isResolved);
 
     return (
       <div className="flex flex-col gap-1.5 p-3 rounded-xl border border-slate-700/50 bg-slate-800/40">

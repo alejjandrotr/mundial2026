@@ -32,14 +32,7 @@ export default function WhatIfSimulator() {
   const [users, setUsers] = useState<Usuario[]>([]);
   const [predictions, setPredictions] = useState<Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>>>({});
 
-  const sortedUsers = useMemo(() => {
-    if (!currentUser) return realSortedUsers;
-    const currentIdx = realSortedUsers.findIndex((u) => u.uid === currentUser.uid);
-    if (currentIdx === -1) return realSortedUsers;
-    const result = [...realSortedUsers];
-    const [me] = result.splice(currentIdx, 1);
-    return [me, ...result];
-  }, [realSortedUsers, currentUser]);
+  // sortedUsers se define más abajo, después de realSortedUsers, para evitar error de referencia de TypeScript
 
   // Local simulated matches state
   const [simulatedMatches, setSimulatedMatches] = useState<Record<string, SimulatedMatchState>>({});
@@ -151,6 +144,15 @@ export default function WhatIfSimulator() {
       return b.goalHits - a.goalHits;
     });
   }, [users, matches, predictions]);
+
+  const sortedUsers = useMemo(() => {
+    if (!currentUser) return realSortedUsers;
+    const currentIdx = realSortedUsers.findIndex((u) => u.uid === currentUser.uid);
+    if (currentIdx === -1) return realSortedUsers;
+    const result = [...realSortedUsers];
+    const [me] = result.splice(currentIdx, 1);
+    return [me, ...result];
+  }, [realSortedUsers, currentUser]);
 
   // Calcular puntos simulados y aciertos exactos e individuales simulados para cada usuario
   const userSimulatedStats = useMemo(() => {
