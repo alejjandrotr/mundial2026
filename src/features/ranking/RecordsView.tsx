@@ -2,13 +2,14 @@ import { useEffect, useState, useMemo } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { Usuario, Partido } from '../../models/types';
-import { Trophy, Target, Award, Sparkles, Medal, Loader2 } from 'lucide-react';
+import { Trophy, Target, Award, Sparkles, Medal, Loader2, Flame } from 'lucide-react';
 import { toTitleCase } from '../../utils/format';
 
 interface UserRecordStats extends Usuario {
   exactHits: number;
   goalHits: number;
   outcomeHits: number;
+  maxStreak: number;
 }
 
 export default function RecordsView() {
@@ -74,12 +75,25 @@ export default function RecordsView() {
 
   // Calcular las estadísticas para cada usuario en base a predicciones y partidos reales
   const computedRecords = useMemo<UserRecordStats[]>(() => {
+    // Ordenar partidos finalizados cronológicamente para el cálculo de rachas
+    const chronMatches = [...matches]
+      .filter(m => m.status === 'finished' && m.homeGoals !== null && m.awayGoals !== null)
+      .sort((a, b) => {
+        const timeA = a.kickoffTime?.toDate ? a.kickoffTime.toDate().getTime() : new Date(a.kickoffTime).getTime();
+        const timeB = b.kickoffTime?.toDate ? b.kickoffTime.toDate().getTime() : new Date(b.kickoffTime).getTime();
+        return timeA - timeB;
+      });
+
     return users.map(user => {
       const userPreds = predictions[user.uid] || {};
       let exactHits = 0;
       let goalHits = 0;
       let outcomeHits = 0;
+      
+      let maxStreak = 0;
+      let currentStreak = 0;
 
+      // Calcular estadísticas generales
       matches.forEach(match => {
         if (match.status === 'finished' && match.homeGoals !== null && match.awayGoals !== null) {
           const pred = userPreds[match.id];
@@ -103,11 +117,32 @@ export default function RecordsView() {
         }
       });
 
+      // Calcular racha más larga (con aciertos en partidos continuos)
+      chronMatches.forEach(match => {
+        const pred = userPreds[match.id];
+        if (pred && pred.homeGoals !== null && pred.awayGoals !== null && match.homeGoals !== null && match.awayGoals !== null) {
+          const predOutcome = pred.homeGoals > pred.awayGoals ? 'home' : pred.homeGoals < pred.awayGoals ? 'away' : 'draw';
+          const realOutcome = match.homeGoals > match.awayGoals ? 'home' : match.homeGoals < match.awayGoals ? 'away' : 'draw';
+          
+          if (predOutcome === realOutcome) {
+            currentStreak++;
+            if (currentStreak > maxStreak) {
+              maxStreak = currentStreak;
+            }
+          } else {
+            currentStreak = 0;
+          }
+        } else {
+          currentStreak = 0; // Si no predijo, rompe la racha
+        }
+      });
+
       return {
         ...user,
         exactHits,
         goalHits,
-        outcomeHits
+        outcomeHits,
+        maxStreak
       };
     });
   }, [users, matches, predictions]);
@@ -137,6 +172,14 @@ export default function RecordsView() {
     });
   }, [computedRecords]);
 
+  const topStreaks = useMemo(() => {
+    return [...computedRecords].sort((a, b) => {
+      if (b.maxStreak !== a.maxStreak) return b.maxStreak - a.maxStreak;
+      if (b.outcomeHits !== a.outcomeHits) return b.outcomeHits - a.outcomeHits;
+      return b.totalPoints - a.totalPoints;
+    });
+  }, [computedRecords]);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
@@ -153,7 +196,8 @@ export default function RecordsView() {
     data: UserRecordStats[],
     keyExtractor: (user: UserRecordStats) => number,
     label: string,
-    badgeColor: string
+    badgeColor: string,
+    limit: number = 10
   ) => {
     return (
       <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-4 backdrop-blur-sm shadow-xl flex flex-col h-full">
@@ -168,7 +212,7 @@ export default function RecordsView() {
         </div>
 
         <div className="divide-y divide-slate-850 flex-1">
-          {data.slice(0, 10).map((user, idx) => {
+          {data.slice(0, limit).map((user, idx) => {
             const rank = idx + 1;
             const value = keyExtractor(user);
             let rankBadge = null;
@@ -228,7 +272,7 @@ export default function RecordsView() {
       </div>
 
       {/* Grid of Leaderboards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
         {/* Top AG */}
         {renderRankList(
           "Top Acierto de Goles (AG)",
@@ -260,6 +304,18 @@ export default function RecordsView() {
           (u) => u.outcomeHits,
           "Partidos",
           "bg-emerald-950/30 text-emerald-400 border-emerald-500/20"
+        )}
+
+        {/* Top 5 Rachas Ganadoras */}
+        {renderRankList(
+          "Top 5 Rachas Ganadoras (RG)",
+          "Mayor cantidad de aciertos en partidos consecutivos",
+          <Flame className="w-5 h-5 text-orange-500 animate-pulse" />,
+          topStreaks,
+          (u) => u.maxStreak,
+          "Partidos",
+          "bg-orange-950/30 text-orange-400 border-orange-500/20",
+          5
         )}
       </div>
     </div>
