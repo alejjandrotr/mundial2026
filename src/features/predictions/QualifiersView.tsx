@@ -2,8 +2,9 @@ import { useState, useMemo, useEffect } from 'react';
 import type { Partido, Usuario } from '../../models/types';
 import { getCachedMatches, getCachedUsers, getCachedPredictions } from '../../utils/cache';
 import { calculateAllGroupStandings, getBestThirdPlaceTeams, isGroupComplete } from '../../utils/standings';
-import { Loader2, Users, Trophy, ChevronDown } from 'lucide-react';
+import { Loader2, Users, Trophy, ChevronDown, Eye } from 'lucide-react';
 import { getFlagUrl } from '../../utils/flags';
+import GroupClosureFlyerModal from './GroupClosureFlyerModal';
 
 export default function QualifiersView() {
   const [matches, setMatches] = useState<Partido[]>([]);
@@ -11,6 +12,7 @@ export default function QualifiersView() {
   const [predictions, setPredictions] = useState<Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>>>({});
   const [loading, setLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [flyerGroup, setFlyerGroup] = useState<string | null>(null);
 
   const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 
@@ -256,8 +258,15 @@ export default function QualifiersView() {
         {/* Grupos 1ros y 2dos */}
         {groups.map((g) => (
           <div key={g} className="space-y-3">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-700/50 pb-2">
+            <h3 className="text-sm font-bold text-white flex items-center justify-between border-b border-slate-700/50 pb-2">
               <span className="bg-slate-800 px-2 py-0.5 rounded text-slate-300 border border-slate-700">Grupo {g}</span>
+              <button 
+                onClick={() => setFlyerGroup(g)}
+                className="flex items-center gap-1 text-[10px] bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 px-2 py-1 rounded border border-indigo-500/20 transition-colors"
+                title="Ver predicciones de todos los jugadores"
+              >
+                <Eye className="w-3 h-3" /> Ver Flyer
+              </button>
             </h3>
             {renderSlot(`1º Grupo ${g}`, '1st', g, null)}
             {renderSlot(`2º Grupo ${g}`, '2nd', g, null)}
@@ -279,6 +288,16 @@ export default function QualifiersView() {
           ))}
         </div>
       </div>
+
+      {flyerGroup && (
+        <GroupClosureFlyerModal
+          group={flyerGroup}
+          matches={matches}
+          users={users}
+          predictions={predictions}
+          onClose={() => setFlyerGroup(null)}
+        />
+      )}
     </div>
   );
 }
