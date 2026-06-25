@@ -3,7 +3,6 @@ import { X, Trophy, Download, Smartphone, Monitor } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { getFlagUrl } from '../../utils/flags';
 import type { Partido, Usuario } from '../../models/types';
-import { abbreviateTeam } from './ComparisonGrid';
 import { getAbbreviatedUserNames } from '../../utils/userNames';
 import { calculateAllGroupStandings, getBestThirdPlaceTeams, isGroupComplete } from '../../utils/standings';
 
@@ -217,7 +216,7 @@ export default function GroupClosureFlyerModal({
             )}
 
             {officialData.groupTeams.slice(0, 4).map((offTeam, offIndex) => (
-              <div key={offTeam.id} className="flex flex-col lg:flex-row gap-4 mb-4 lg:mb-0">
+              <div key={offTeam.name} className="flex flex-col lg:flex-row gap-4 mb-4 lg:mb-0">
                 
                 {/* Official Team Row Header */}
                 <div className={`w-full lg:w-[200px] shrink-0 flex items-center ${isVertical ? 'bg-slate-800/80 p-3 rounded-2xl mb-2' : 'bg-slate-800/30 p-4 rounded-2xl flex-col justify-center'} border border-slate-700/50 relative overflow-hidden group`}>
