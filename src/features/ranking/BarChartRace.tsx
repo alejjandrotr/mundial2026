@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Play, Pause, X, Trophy, Flame, Settings, ChevronRight, AlertCircle, FastForward, SkipBack, SkipForward } from 'lucide-react';
+import { Play, Pause, X, Trophy, Flame, Settings, ChevronRight, AlertCircle, FastForward, SkipBack, SkipForward, Maximize } from 'lucide-react';
 import type { Partido, Usuario } from '../../models/types';
 import { calculateMatchPoints } from '../../utils/scoring';
 import { getFlagUrl } from '../../utils/flags';
@@ -233,6 +233,16 @@ export default function BarChartRace({ users, matches, predictions, onClose }: B
   const currentFrame = frames[currentFrameIndex];
   const maxScore = currentFrame.scores[0]?.points || 1;
   const matchLabel = `${currentFrame.match.homeTeam} ${currentFrame.match.homeGoals} - ${currentFrame.match.awayGoals} ${currentFrame.match.awayTeam}`;
+  
+  const actualVisibleCountForScale = visiblePlayers === 'all' ? users.length : visiblePlayers;
+  const visibleScores = currentFrame.scores.slice(0, actualVisibleCountForScale);
+  const minScore = visibleScores.length > 0 ? visibleScores[visibleScores.length - 1].points : 0;
+  // Anclaje de escala dinámica: 95% del puntaje más bajo visible, para magnificar diferencias
+  const baseScore = maxScore > 10 ? Math.max(0, minScore * 0.95) : 0; 
+  const scoreRange = Math.max(1, maxScore - baseScore);
+  
+  const isBatacazoActive = activeEvent?.type === 'EXCLUSIVE_HIT';
+  const batacazoNames = isBatacazoActive && activeEvent.details ? activeEvent.details.split(', ') : [];
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col font-sans text-white overflow-hidden">
@@ -248,6 +258,20 @@ export default function BarChartRace({ users, matches, predictions, onClose }: B
         </div>
         
         <div className="flex items-center gap-4">
+          <button 
+            onClick={() => {
+              if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => console.log(err));
+              } else {
+                document.exitFullscreen();
+              }
+            }}
+            className="p-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+            title="Pantalla Completa"
+          >
+            <Maximize className="w-5 h-5" />
+          </button>
+          
           <div className="relative">
             <button 
               onClick={() => setShowSettings(!showSettings)}
@@ -314,7 +338,12 @@ export default function BarChartRace({ users, matches, predictions, onClose }: B
           </div>
           
           <button 
-            onClick={onClose}
+            onClick={() => {
+              if (document.fullscreenElement) {
+                document.exitFullscreen().catch(e => console.log(e));
+              }
+              onClose();
+            }}
             className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
@@ -355,7 +384,7 @@ export default function BarChartRace({ users, matches, predictions, onClose }: B
 
       {/* BANNER EVENTOS ESPECIALES */}
       {activeEvent && (
-        <div className={`absolute z-40 bg-slate-900/90 backdrop-blur-xl p-6 rounded-3xl border border-slate-700 shadow-[0_0_50px_rgba(0,0,0,0.8)] flex flex-col items-center text-center animate-bounce-slight ${activeEvent.type === 'EXCLUSIVE_HIT' ? 'right-8 top-[35%] w-[320px]' : 'top-1/4 left-1/2 -translate-x-1/2 min-w-[300px]'}`}>
+        <div className="absolute right-8 top-[35%] z-40 bg-slate-900/40 backdrop-blur-md p-6 rounded-3xl border border-slate-700/50 shadow-[0_0_50px_rgba(0,0,0,0.5)] flex flex-col items-center text-center animate-bounce-slight w-[320px]">
           {activeEvent.type === 'NEW_LEADER' && <Trophy className="w-12 h-12 text-yellow-400 mb-3 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]" />}
           {activeEvent.type === 'EXCLUSIVE_HIT' && <AlertCircle className="w-12 h-12 text-worldcup-pink mb-3 drop-shadow-[0_0_15px_rgba(241,91,181,0.5)]" />}
           {activeEvent.type === 'CYCLE_START' && <FastForward className="w-12 h-12 text-worldcup-green mb-3 drop-shadow-[0_0_15px_rgba(0,245,212,0.5)]" />}
@@ -373,7 +402,7 @@ export default function BarChartRace({ users, matches, predictions, onClose }: B
 
       {/* CHART AREA */}
       <div className="flex-1 relative p-6 pt-12 overflow-hidden">
-        <div className="absolute left-[200px] top-6 bottom-6 right-8 border-l-2 border-slate-800">
+        <div className="absolute left-[200px] top-6 bottom-6 right-[400px] border-l-2 border-slate-800">
           {/* Axis lines - just decorative */}
           {[1, 2, 3, 4, 5].map(i => (
             <div key={i} className="absolute top-0 bottom-0 border-l border-slate-800/50" style={{ left: `${(i/5)*100}%` }}></div>
@@ -387,24 +416,27 @@ export default function BarChartRace({ users, matches, predictions, onClose }: B
             
             if (visiblePlayers !== 'all' && scoreData.rank > visiblePlayers) return null;
 
-            const BAR_HEIGHT = 36;
-            const PADDING = 8;
-            const topPosition = (scoreData.rank - 1) * (BAR_HEIGHT + PADDING);
+            const actualVisibleCount = visiblePlayers === 'all' ? users.length : visiblePlayers;
             
-            // Calculamos el ancho como porcentaje del máximo actual
-            // Math.max para evitar ancho 0 o negativo
-            const widthPercentage = maxScore > 0 ? Math.max((scoreData.points / maxScore) * 100, 2) : 2; 
+            // Usamos porcentajes para distribuir el espacio verticalmente
+            const topPosition = `calc(${(scoreData.rank - 1) * 100 / actualVisibleCount}%)`;
+            const barHeight = `calc(${100 / actualVisibleCount}% - 8px)`;
+            
+            // Calculamos el ancho relativo usando baseScore y scoreRange para magnificar diferencias
+            const widthPercentage = maxScore > 0 ? Math.max(((scoreData.points - baseScore) / scoreRange) * 100, 1) : 1; 
             
             let streakEl = null;
-            if (scoreData.streak >= 3) {
-              const multiplier = scoreData.streak - 2; // streak 3 = x1 (no shown), 4 = x2, 5 = x3
+            if (scoreData.streak >= 2) {
+              const multiplier = scoreData.streak; // 2 in a row = 1 flame, 3 = x3, 4 = x4
               streakEl = (
                 <div className="flex items-center gap-1 animate-pulse drop-shadow-[0_0_8px_rgba(249,115,22,0.8)]">
                   <Flame className="w-5 h-5 text-orange-500 fill-orange-500" />
-                  {multiplier > 1 && <span className="text-xs font-black text-orange-400">x{multiplier}</span>}
+                  {multiplier > 2 && <span className="text-xs font-black text-orange-400">x{multiplier}</span>}
                 </div>
               );
             }
+
+            const isBatacazoWinner = isBatacazoActive && batacazoNames.includes(scoreData.name);
 
             return (
               <div 
@@ -412,20 +444,22 @@ export default function BarChartRace({ users, matches, predictions, onClose }: B
                 className="absolute left-0 flex items-center transition-all duration-700 ease-in-out"
                 style={{
                   top: topPosition,
-                  width: 'calc(100% - 200px)', // Espacio para el nombre a la izquierda
-                  height: BAR_HEIGHT,
+                  width: 'calc(100% - 600px)', // 200px izq (nombres) + 400px der (overlays)
+                  height: barHeight,
                   zIndex: 20 - scoreData.rank // Los primeros arriba
                 }}
               >
                 {/* Nombre a la izquierda */}
                 <div className="w-[180px] text-right pr-4 flex-shrink-0 flex items-center justify-end gap-2">
-                  <span className="text-sm font-bold text-slate-300 truncate">{scoreData.name}</span>
+                  <span className={`text-sm font-bold truncate transition-colors ${isBatacazoWinner ? 'text-worldcup-pink drop-shadow-[0_0_8px_rgba(241,91,181,0.8)]' : 'text-slate-300'}`}>
+                    {scoreData.name}
+                  </span>
                 </div>
                 
                 {/* Barra */}
                 <div className="relative h-full flex items-center transition-all duration-700 ease-in-out" style={{ width: `${widthPercentage}%` }}>
                   <div 
-                    className="absolute inset-0 rounded-r-lg opacity-90 shadow-lg"
+                    className={`absolute inset-0 rounded-r-lg opacity-90 shadow-lg ${isBatacazoWinner ? 'border-2 border-worldcup-pink drop-shadow-[0_0_15px_rgba(241,91,181,0.8)] animate-pulse' : ''}`}
                     style={{ backgroundColor: scoreData.color }}
                   />
                   {/* Puntos numéricos y fueguito integrados a la derecha de la barra */}
