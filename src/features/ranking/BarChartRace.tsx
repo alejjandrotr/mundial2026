@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { Play, Pause, X, Trophy, Flame, Settings, ChevronRight, AlertCircle, FastForward, SkipBack, SkipForward, Maximize } from 'lucide-react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Play, Pause, X, Trophy, Flame, Settings, AlertCircle, FastForward, SkipBack, SkipForward, Maximize } from 'lucide-react';
 import type { Partido, Usuario } from '../../models/types';
 import { calculateMatchPoints } from '../../utils/scoring';
 import { getFlagUrl } from '../../utils/flags';
@@ -50,8 +50,8 @@ export default function BarChartRace({ users, matches, predictions, onClose }: B
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
   const [visiblePlayers, setVisiblePlayers] = useState<number | 'all'>('all');
 
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<any>(null);
+  const pauseTimeoutRef = useRef<any>(null);
 
   // 1. Preprocesar datos en "Frames"
   const frames = useMemo(() => {

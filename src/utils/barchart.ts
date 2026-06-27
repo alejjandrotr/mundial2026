@@ -32,7 +32,7 @@ export function generateBarChartRaceCSV(
   // 3. Iterar por cada usuario y calcular sus puntos acumulados
   users.forEach(user => {
     const userName = toTitleCase(user.displayName || "Desconocido").replace(/,/g, ''); // Evitar comas que rompan el CSV
-    const imageUrl = user.photoURL || ""; 
+    const imageUrl = (user as any).photoURL || ""; 
     
     let userRow = `"${userName}","${imageUrl}"`;
     let currentTotal = 0;
