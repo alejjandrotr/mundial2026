@@ -10,7 +10,8 @@ import { useAuth } from '../../context/AuthContext';
 import MatchFlyerModal from '../predictions/MatchFlyerModal';
 import TodayMatchesFlyerModal from '../predictions/TodayMatchesFlyerModal';
 
-import { isLockedForOthers as getIsLockedForOthers } from '../../config/constants';
+import { usePhase } from '../../context/PhaseContext';
+import { isPrivacyEnabledForPhase } from '../../config/constants';
 
 export default function MatchList() {
   const [matches, setMatches] = useState<Partido[]>([]);
@@ -21,6 +22,7 @@ export default function MatchList() {
   const [selectedMatchForFlyer, setSelectedMatchForFlyer] = useState<Partido | null>(null);
   const [showTodayFlyer, setShowTodayFlyer] = useState(false);
   const { currentUser } = useAuth();
+  const { activePhase } = usePhase();
 
   useEffect(() => {
     const q = query(collection(db, 'partidos'), orderBy('kickoffTime', 'asc'));
@@ -60,8 +62,10 @@ export default function MatchList() {
   }, [users, currentUser]);
 
   const isLockedForOthers = useMemo(() => {
-    return getIsLockedForOthers();
-  }, []);
+    return isPrivacyEnabledForPhase(activePhase);
+  }, [activePhase]);
+
+  const phaseMatches = useMemo(() => matches.filter(m => (m.phase || 'grupos') === activePhase), [matches, activePhase]);
 
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -95,7 +99,7 @@ export default function MatchList() {
         </button>
       </div>
 
-      {matches.map((match) => {
+      {phaseMatches.map((match) => {
         const venue = getMatchVenue(match.group || 'A', match.homeTeam);
         return (
           <div key={match.id} className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-5 backdrop-blur-sm hover:border-slate-600/50 transition-colors">
@@ -174,7 +178,7 @@ export default function MatchList() {
         );
       })}
 
-      {matches.length === 0 && (
+      {phaseMatches.length === 0 && (
         <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-8 text-center text-slate-400">
           No hay partidos programados.
         </div>
@@ -193,7 +197,7 @@ export default function MatchList() {
 
       {showTodayFlyer && (
         <TodayMatchesFlyerModal
-          matches={matches}
+          matches={phaseMatches}
           users={sortedUsers}
           predictions={predictions}
           onClose={() => setShowTodayFlyer(false)}

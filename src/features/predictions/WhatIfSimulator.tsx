@@ -6,9 +6,7 @@ import { Loader2, HelpCircle, Undo, Trophy, Medal, ArrowUp, ArrowDown, Minus, Lo
 import { useAuth } from '../../context/AuthContext';
 import { getFlagUrl } from '../../utils/flags';
 import { getMatchVenue } from '../../utils/venues';
-
-
-
+import { usePhase } from '../../context/PhaseContext';
 interface SimulatedMatchState {
   id: string;
   homeTeam: string;
@@ -24,6 +22,7 @@ import { isLockedForOthers } from '../../config/constants';
 export default function WhatIfSimulator() {
   const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
+  const { activePhase, availablePhases } = usePhase();
 
   const isBeforeRevealDate = useMemo(() => {
     return isLockedForOthers();
@@ -111,13 +110,15 @@ export default function WhatIfSimulator() {
     setSimulatedMatches(resetState);
   };
 
-  // Calcular los aciertos reales para cada usuario para tener el ranking real de referencia correcto
+  const phaseMatches = useMemo(() => matches.filter(m => (m.phase || 'grupos') === activePhase), [matches, activePhase]);
+
+  // Calcular los aciertos reales para cada usuario para tener el ranking real de referencia correcto (DE LA FASE)
   const realSortedUsers = useMemo(() => {
     const calculated = users.map(user => {
       const userPreds = predictions[user.uid] || {};
       let exactHits = 0;
       let goalHits = 0;
-      matches.forEach(match => {
+      phaseMatches.forEach(match => {
         if (match.status === 'finished' && match.homeGoals !== null && match.awayGoals !== null) {
           const pred = userPreds[match.id];
           if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
@@ -129,8 +130,13 @@ export default function WhatIfSimulator() {
           }
         }
       });
+      const phaseTotalPoints = activePhase === 'grupos' 
+        ? (user.phaseStats?.[activePhase]?.totalPoints ?? user.totalPoints) 
+        : (user.phaseStats?.[activePhase]?.totalPoints ?? 0);
+
       return {
         ...user,
+        displayPoints: phaseTotalPoints,
         exactHits,
         goalHits
       };
@@ -138,12 +144,12 @@ export default function WhatIfSimulator() {
 
     // Ordenar por puntos reales (desc) y luego por aciertos de goles individuales reales (desc)
     return calculated.sort((a, b) => {
-      if (b.totalPoints !== a.totalPoints) {
-        return b.totalPoints - a.totalPoints;
+      if (b.displayPoints !== a.displayPoints) {
+        return b.displayPoints - a.displayPoints;
       }
       return b.goalHits - a.goalHits;
     });
-  }, [users, matches, predictions]);
+  }, [users, phaseMatches, predictions, activePhase]);
 
   const sortedUsers = useMemo(() => {
     if (!currentUser) return realSortedUsers;
@@ -246,7 +252,7 @@ export default function WhatIfSimulator() {
           </div>
           <div>
             <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-              <span>🔮 Simulador de Escenarios</span>
+              <span>🔮 Simulador de Escenarios ({availablePhases.find(p => p.id === activePhase)?.label})</span>
               <span className="bg-indigo-500/20 text-indigo-400 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">Modo Laboratorio</span>
             </h2>
             <p className="text-slate-400 text-xs">Juega a fingir resultados oficiales. Modifica la columna "Simulación Oficial" y mira los cambios en la Tabla de Posiciones al instante.</p>
@@ -308,7 +314,7 @@ export default function WhatIfSimulator() {
                               {userSimulatedStats[user.uid]?.simPoints || 0} pts ({userSimulatedStats[user.uid]?.simGoalHits || 0} AG, {userSimulatedStats[user.uid]?.simExactHits || 0} ME)
                             </span>
                             <span className="text-[9px] text-slate-500 font-mono">
-                              Real: {user.totalPoints || 0} pts ({user.goalHits || 0} AG, {user.exactHits || 0} ME)
+                              Real: {user.displayPoints || 0} pts ({user.goalHits || 0} AG, {user.exactHits || 0} ME)
                             </span>
                           </div>
                         </th>
@@ -317,7 +323,7 @@ export default function WhatIfSimulator() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {matches.map((match) => {
+                  {phaseMatches.map((match) => {
                     const simMatch = simulatedMatches[match.id];
                     const isSimulated = simMatch?.isSimulated;
                     const simH = simMatch && simMatch.homeGoals !== '' ? parseInt(simMatch.homeGoals, 10) : null;
@@ -548,7 +554,7 @@ export default function WhatIfSimulator() {
                           {user.displayName}
                         </span>
                         <span className="text-[9px] text-slate-500 font-mono mt-0.5">
-                          Real: {user.realRank}º ({user.totalPoints} pts, {user.goalHits || 0} AG, {user.exactHits || 0} ME)
+                          Real: {user.realRank}º ({user.displayPoints} pts, {user.goalHits || 0} AG, {user.exactHits || 0} ME)
                         </span>
                       </div>
                     </div>

@@ -4,6 +4,7 @@ import type { Partido, Usuario } from '../../models/types';
 import { calculateMatchPoints } from '../../utils/scoring';
 import { getFlagUrl } from '../../utils/flags';
 import { toTitleCase } from '../../utils/format';
+import { usePhase } from '../../context/PhaseContext';
 
 interface BarChartRaceProps {
   users: Usuario[];
@@ -53,9 +54,12 @@ export default function BarChartRace({ users, matches, predictions, onClose }: B
   const timerRef = useRef<any>(null);
   const pauseTimeoutRef = useRef<any>(null);
 
+  const { activePhase, availablePhases } = usePhase();
+
   // 1. Preprocesar datos en "Frames"
   const frames = useMemo(() => {
-    const finishedMatches = [...matches]
+    const phaseMatches = matches.filter(m => (m.phase || 'grupos') === activePhase);
+    const finishedMatches = [...phaseMatches]
       .filter(m => m.status === 'finished' && m.homeGoals !== null && m.awayGoals !== null)
       .sort((a, b) => {
         const timeA = a.kickoffTime?.toDate ? a.kickoffTime.toDate().getTime() : new Date(a.kickoffTime).getTime();
@@ -79,9 +83,13 @@ export default function BarChartRace({ users, matches, predictions, onClose }: B
       const events: FrameEvent[] = [];
 
       // Detectar inicio de ciclo (jornadas 1, 2, 3) - Simplificado: Cada 16 partidos es una jornada (48 partidos fase grupos)
-      if (idx === 0) events.push({ type: 'CYCLE_START', message: '¡Inicia la Jornada 1!' });
-      if (idx === 16) events.push({ type: 'CYCLE_START', message: '¡Inicia la Jornada 2!' });
-      if (idx === 32) events.push({ type: 'CYCLE_START', message: '¡Inicia la Jornada 3!' });
+      if (activePhase === 'grupos') {
+        if (idx === 0) events.push({ type: 'CYCLE_START', message: '¡Inicia la Jornada 1!' });
+        if (idx === 16) events.push({ type: 'CYCLE_START', message: '¡Inicia la Jornada 2!' });
+        if (idx === 32) events.push({ type: 'CYCLE_START', message: '¡Inicia la Jornada 3!' });
+      } else {
+        if (idx === 0) events.push({ type: 'CYCLE_START', message: `¡Inicia la fase de ${availablePhases.find(p => p.id === activePhase)?.label}!` });
+      }
 
       users.forEach(user => {
         const pred = predictions[user.uid]?.[match.id];
@@ -157,7 +165,7 @@ export default function BarChartRace({ users, matches, predictions, onClose }: B
     });
 
     return generatedFrames;
-  }, [users, matches, predictions]);
+  }, [users, matches, predictions, activePhase, availablePhases]);
 
   // Limpiar timers al desmontar
   useEffect(() => {
@@ -252,7 +260,7 @@ export default function BarChartRace({ users, matches, predictions, onClose }: B
         <div className="flex items-center gap-3">
           <Trophy className="w-6 h-6 text-worldcup-green" />
           <div>
-            <h2 className="text-xl font-black tracking-tight">Bar Chart Race</h2>
+            <h2 className="text-xl font-black tracking-tight">Bar Chart Race ({availablePhases.find(p => p.id === activePhase)?.label})</h2>
             <p className="text-xs text-slate-400">Evolución partido a partido</p>
           </div>
         </div>

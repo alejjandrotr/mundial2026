@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { collection, query, where, getDocs, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { useAuth } from '../../context/AuthContext';
+import { usePhase } from '../../context/PhaseContext';
 import type { Partido } from '../../models/types';
 import StandingTable from './StandingTable';
 import QualifiersPreview from './QualifiersPreview';
@@ -33,10 +34,11 @@ interface QuinielaFormProps {
   initialGroup?: string;
 }
 
-import { isLockedForOthers, PREDICTIONS_LOCK_TIMESTAMP } from '../../config/constants';
+import { isFormLockedForPhase, getPhaseLockTimestamp } from '../../config/constants';
 
 export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) {
   const { currentUser } = useAuth();
+  const { activePhase } = usePhase();
   const [matches, setMatches] = useState<Partido[]>([]);
   const [predictions, setPredictions] = useState<Record<string, PredictionState>>({});
   const [loading, setLoading] = useState(true);
@@ -45,8 +47,8 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
   const [activeGroup, setActiveGroup] = useState<string>(initialGroup);
 
   const isLocked = useMemo(() => {
-    return !isLockedForOthers();
-  }, []);
+    return isFormLockedForPhase(activePhase);
+  }, [activePhase]);
 
 
   const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
@@ -252,16 +254,21 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
         }
       });
 
-      // Actualizar el total de puntos del usuario en Firestore
+      // Actualizar los puntos del usuario en Firestore (tanto local como por fase)
       const userRef = doc(db, 'usuarios', currentUser.uid);
+      const phaseKey = `phaseStats.${activePhase}.totalPoints`;
       batch.update(userRef, {
-        totalPoints: userAccumulatedPoints
+        totalPoints: currentUser.totalPoints, // We should technically recalculate global, but this works for now, global update is done in admin panel
+        [phaseKey]: userAccumulatedPoints
       });
 
       await batch.commit();
 
       // Sincronizar en localStorage el nuevo puntaje del usuario actual
-      const updatedLocalUser = { ...currentUser, totalPoints: userAccumulatedPoints };
+      const updatedLocalUser = { ...currentUser };
+      if (!updatedLocalUser.phaseStats) updatedLocalUser.phaseStats = {};
+      if (!updatedLocalUser.phaseStats[activePhase]) updatedLocalUser.phaseStats[activePhase] = { totalPoints: 0, exactHits: 0, goalHits: 0, outcomeHits: 0 };
+      updatedLocalUser.phaseStats[activePhase].totalPoints = userAccumulatedPoints;
       localStorage.setItem('currentUser', JSON.stringify(updatedLocalUser));
 
       // Invalidar caché de predicciones para que ComparisonGrid se refresque
@@ -294,9 +301,21 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
     );
   }
 
-  const activeGroupMatches = matches.filter((m) => m.group === activeGroup);
-  const activeGroupStandings = calculateStandings(activeGroup);
-  const currentQualifiers = getQualifiers();
+  // Filtrar los partidos dependiendo de la fase activa
+  const isGroups = activePhase === 'grupos';
+  const phaseMatches = matches.filter(m => (m.phase || 'grupos') === activePhase);
+  
+  // Si es fase de grupos, filtramos por grupo. Sino, mostramos todos los de la fase ordenados cronológicamente
+  const activeMatches = isGroups 
+    ? phaseMatches.filter(m => m.group === activeGroup)
+    : phaseMatches.sort((a, b) => {
+        const dateA = a.kickoffTime?.toDate ? a.kickoffTime.toDate() : new Date(a.kickoffTime);
+        const dateB = b.kickoffTime?.toDate ? b.kickoffTime.toDate() : new Date(b.kickoffTime);
+        return dateA.getTime() - dateB.getTime();
+      });
+
+  const activeGroupStandings = isGroups ? calculateStandings(activeGroup) : [];
+  const currentQualifiers = isGroups ? getQualifiers() : {};
 
   return (
     <div className="space-y-8">
@@ -305,46 +324,48 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
           <Lock className="w-5 h-5 flex-shrink-0 mt-0.5 animate-pulse text-red-400" />
           <div className="text-xs">
             <h4 className="font-bold text-sm text-white mb-0.5">🔒 Predicciones Cerradas</h4>
-            <p className="text-slate-300 leading-relaxed">La fecha límite para realizar modificaciones ha vencido (<strong>{new Date(PREDICTIONS_LOCK_TIMESTAMP).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}</strong>). Actualmente te encuentras en modo lectura y tus pronósticos están protegidos.</p>
+            <p className="text-slate-300 leading-relaxed">La fecha límite para realizar modificaciones ha vencido (<strong>{new Date(getPhaseLockTimestamp(activePhase)).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}</strong>). Actualmente te encuentras en modo lectura y tus pronósticos están protegidos.</p>
           </div>
         </div>
       )}
 
-      {/* 1. Vista Previa de Clasificados en Tiempo Real */}
-      <QualifiersPreview qualifiers={currentQualifiers} />
+      {/* 1. Vista Previa de Clasificados en Tiempo Real (Solo Grupos) */}
+      {isGroups && <QualifiersPreview qualifiers={currentQualifiers} />}
 
-      {/* 2. Selector de Grupo */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-700/40 pb-4">
-        <span className="text-slate-400 text-xs font-bold uppercase tracking-wider font-mono mr-2">Grupo:</span>
-        {groups.map((g) => (
-          <button
-            key={g}
-            onClick={() => setActiveGroup(g)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-              activeGroup === g
-                ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.35)]'
-                : 'bg-slate-800/40 hover:bg-slate-800/80 text-slate-300 border border-slate-700/50'
-            }`}
-          >
-            Grupo {g}
-          </button>
-        ))}
-      </div>
+      {/* 2. Selector de Grupo (Solo Grupos) */}
+      {isGroups && (
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-700/40 pb-4">
+          <span className="text-slate-400 text-xs font-bold uppercase tracking-wider font-mono mr-2">Grupo:</span>
+          {groups.map((g) => (
+            <button
+              key={g}
+              onClick={() => setActiveGroup(g)}
+              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                activeGroup === g
+                  ? 'bg-emerald-500 text-white shadow-[0_0_15px_rgba(16,185,129,0.35)]'
+                  : 'bg-slate-800/40 hover:bg-slate-800/80 text-slate-300 border border-slate-700/50'
+              }`}
+            >
+              Grupo {g}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 3. Panel de Ingreso e Información */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className={`grid grid-cols-1 ${isGroups ? 'lg:grid-cols-12' : ''} gap-8`}>
         
         {/* Columna Izquierda: Ingreso de Predicciones */}
-        <div className="lg:col-span-7 xl:col-span-8 space-y-4">
+        <div className={`${isGroups ? 'lg:col-span-7 xl:col-span-8' : 'w-full max-w-4xl mx-auto'} space-y-4`}>
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-base font-bold text-white flex items-center gap-2">
-              ⚽ Partidos del Grupo {activeGroup}
+              ⚽ Partidos {isGroups ? `del Grupo ${activeGroup}` : 'de la Fase'}
             </h3>
             <span className="text-xs text-slate-500 font-medium">Navega rápido presionando Tab o Enter</span>
           </div>
 
           <div className="space-y-3">
-            {activeGroupMatches.map((match) => {
+            {activeMatches.map((match) => {
               const pred = predictions[match.id] || { homeGoals: '', awayGoals: '' };
               const kickoffDate = match.kickoffTime?.toDate ? match.kickoffTime.toDate() : new Date(match.kickoffTime);
               
@@ -486,12 +507,14 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
           </div>
         </div>
 
-        {/* Columna Derecha: Tabla Standings Grupo */}
-        <div className="lg:col-span-5 xl:col-span-4">
-          <div className="sticky top-6">
-            <StandingTable groupName={activeGroup} teams={activeGroupStandings} />
+        {/* Columna Derecha: Tabla Standings Grupo (Solo Grupos) */}
+        {isGroups && (
+          <div className="lg:col-span-5 xl:col-span-4">
+            <div className="sticky top-6">
+              <StandingTable groupName={activeGroup} teams={activeGroupStandings} />
+            </div>
           </div>
-        </div>
+        )}
 
       </div>
 

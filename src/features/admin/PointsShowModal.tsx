@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import type { Partido, Usuario } from '../../models/types';
 import { calculateMatchPoints } from '../../utils/scoring';
-import { Trophy, CheckCircle, XCircle, AlertCircle, ArrowRight, Award, RefreshCw } from 'lucide-react';
+import { Trophy, CheckCircle, XCircle, ArrowRight, Award, RefreshCw } from 'lucide-react';
 
 interface PointsShowModalProps {
   match: Partido;
@@ -9,7 +9,7 @@ interface PointsShowModalProps {
   officialAwayGoals: number;
   users: Usuario[];
   predictions: Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>>;
-  onConfirm: (userUpdates: Record<string, number>) => Promise<void>;
+  onConfirm: (userUpdates: Record<string, { globalPoints: number; phasePoints: number }>) => Promise<void>;
   onClose: () => void;
 }
 
@@ -24,6 +24,7 @@ interface UserCalculatedResult {
   matchedAway: boolean;
   previousPoints: number;
   newPoints: number;
+  newGlobalPoints: number;
 }
 
 export default function PointsShowModal({
@@ -54,7 +55,9 @@ export default function PointsShowModal({
       const predAway = pred && pred.awayGoals !== null ? pred.awayGoals : null;
       
       const scoreResult = calculateMatchPoints(predHome, predAway, officialHomeGoals, officialAwayGoals);
-      const prevPoints = user.totalPoints || 0;
+      const matchPhase = match.phase || 'grupos';
+      const prevPhasePoints = user.phaseStats?.[matchPhase]?.totalPoints || 0;
+      const prevGlobalPoints = user.totalPoints || 0;
       
       return {
         userId: user.uid,
@@ -65,8 +68,9 @@ export default function PointsShowModal({
         pointsGained: scoreResult.points,
         matchedHome: scoreResult.matchedHome,
         matchedAway: scoreResult.matchedAway,
-        previousPoints: prevPoints,
-        newPoints: prevPoints + scoreResult.points
+        previousPoints: prevPhasePoints,
+        newPoints: prevPhasePoints + scoreResult.points,
+        newGlobalPoints: prevGlobalPoints + scoreResult.points
       };
     });
 
@@ -109,9 +113,12 @@ export default function PointsShowModal({
     try {
       setIsSaving(true);
       // Map user ID to new point totals
-      const updates: Record<string, number> = {};
+      const updates: Record<string, { globalPoints: number; phasePoints: number }> = {};
       userResults.forEach(r => {
-        updates[r.userId] = r.newPoints;
+        updates[r.userId] = {
+          globalPoints: r.newGlobalPoints,
+          phasePoints: r.newPoints
+        };
       });
       await onConfirm(updates);
     } catch (err) {
@@ -136,7 +143,7 @@ export default function PointsShowModal({
 
             <div className="space-y-2">
               <span className="bg-slate-800 border border-slate-700/85 text-emerald-400 text-xs font-mono font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                Fase de Grupos • Grupo {match.group}
+                Fase: {match.phase || 'Grupos'} {match.group ? `• Grupo ${match.group}` : ''}
               </span>
               <h2 className="text-3xl font-black text-white tracking-tight">Cierre de Partido & Puntos</h2>
               <p className="text-slate-400 text-sm max-w-md mx-auto">
@@ -236,12 +243,6 @@ export default function PointsShowModal({
                   pointsLabel = "+2 PTS (Ganador)";
                   pointsBg = "bg-emerald-500/20 text-emerald-400 border-emerald-500/35";
                   icon = <CheckCircle className="w-8 h-8 text-emerald-400 animate-pulse" />;
-                } else if (cur.pointsGained === 1) {
-                  borderClass = "border-blue-500/40 bg-blue-500/[0.02]";
-                  pointsColor = "text-blue-400";
-                  pointsLabel = "+1 PT (Goles)";
-                  pointsBg = "bg-blue-500/20 text-blue-400 border-blue-500/35";
-                  icon = <AlertCircle className="w-8 h-8 text-blue-400 animate-pulse" />;
                 } else {
                   // 0 points: show red animation as user requested
                   borderClass = "border-red-500/40 bg-red-500/[0.02] shadow-[0_0_20px_rgba(239,68,68,0.05)]";
@@ -335,7 +336,7 @@ export default function PointsShowModal({
               </div>
 
               <span className="bg-slate-800 text-slate-300 border border-slate-700/50 text-[10px] font-mono px-2 py-0.5 rounded uppercase">
-                Grupo {match.group}
+                Fase: {match.phase || 'grupos'}
               </span>
             </div>
 
@@ -361,8 +362,6 @@ export default function PointsShowModal({
                         tagClass = "bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 font-extrabold";
                       } else if (r.pointsGained === 2) {
                         tagClass = "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-extrabold";
-                      } else if (r.pointsGained === 1) {
-                        tagClass = "bg-blue-500/10 text-blue-400 border border-blue-500/30";
                       } else {
                         // 0 points: red tag as user requested
                         tagClass = "bg-red-500/10 text-red-400 border border-red-500/20";

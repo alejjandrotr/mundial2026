@@ -5,20 +5,24 @@ import type { Usuario, Partido } from '../../models/types';
 import { Medal, Trophy, Share2, Calendar, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { calculateMatchPoints } from '../../utils/scoring';
 import { toTitleCase } from '../../utils/format';
+import { usePhase } from '../../context/PhaseContext';
 
 export default function Leaderboard() {
   const [users, setUsers] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [matches, setMatches] = useState<Partido[]>([]);
   const [predictions, setPredictions] = useState<Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>>>({});
+  const { activePhase, availablePhases } = usePhase();
 
   // Calcular aciertos exactos e individuales de goles de cada usuario en base a partidos jugados y predicciones reales
   const computedUsers = useMemo(() => {
+    const phaseMatches = matches.filter(m => (m.phase || 'grupos') === activePhase);
+
     const calculated = users.map(user => {
       const userPreds = predictions[user.uid] || {};
       let exactHits = 0;
       let goalHits = 0;
-      matches.forEach(match => {
+      phaseMatches.forEach(match => {
         if (match.status === 'finished' && match.homeGoals !== null && match.awayGoals !== null) {
           const pred = userPreds[match.id];
           if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
@@ -32,8 +36,14 @@ export default function Leaderboard() {
           }
         }
       });
+      
+      const phaseTotalPoints = activePhase === 'grupos' 
+        ? (user.phaseStats?.[activePhase]?.totalPoints ?? user.totalPoints) 
+        : (user.phaseStats?.[activePhase]?.totalPoints ?? 0);
+
       return {
         ...user,
+        displayPoints: phaseTotalPoints,
         exactHits,
         goalHits
       };
@@ -41,20 +51,21 @@ export default function Leaderboard() {
 
     // Ordenar por puntos (desc) y luego por aciertos de goles individuales (desc) como desempate
     return calculated.sort((a, b) => {
-      if (b.totalPoints !== a.totalPoints) {
-        return b.totalPoints - a.totalPoints;
+      if (b.displayPoints !== a.displayPoints) {
+        return b.displayPoints - a.displayPoints;
       }
       return b.goalHits - a.goalHits;
     });
-  }, [users, matches, predictions]);
+  }, [users, matches, predictions, activePhase]);
 
   const shareOnWhatsApp = () => {
     if (computedUsers.length === 0) return;
 
-    let text = `🏆 *Tabla de Posiciones - Quiniela Mundial 2026* 🏆\n\n`;
+    const phaseLabel = availablePhases.find(p => p.id === activePhase)?.label || activePhase;
+    let text = `🏆 *Tabla de Posiciones - Quiniela Mundial 2026 (${phaseLabel})* 🏆\n\n`;
     computedUsers.slice(0, 20).forEach((user, idx) => {
       const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
-      text += `${medal} *${user.displayName.trim()}* - ${user.totalPoints} pts (${user.goalHits} AG, ${user.exactHits} ME)\n`;
+      text += `${medal} *${user.displayName.trim()}* - ${user.displayPoints} pts (${user.goalHits} AG, ${user.exactHits} ME)\n`;
     });
 
     text += `\n*AG: Acierto de Goles (Desempate)\n*ME: Marcadores Exactos (Top alternativo)\n\n¡Sigue y simula tus resultados aquí!\n${window.location.origin}`;
@@ -148,10 +159,10 @@ export default function Leaderboard() {
         });
       }
 
-      text += `\n🏆 *Tabla General Acumulada:* \n`;
+      text += `\n🏆 *Tabla Acumulada (${activePhase}):* \n`;
       computedUsers.slice(0, 10).forEach((user, idx) => {
         const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
-        text += `${medal} *${user.displayName.trim()}* - ${user.totalPoints} pts (${user.goalHits} AG, ${user.exactHits} ME)\n`;
+        text += `${medal} *${user.displayName.trim()}* - ${user.displayPoints} pts (${user.goalHits} AG, ${user.exactHits} ME)\n`;
       });
 
       text += `\n¡Sigue y simula tus resultados aquí!\n${window.location.origin}`;
@@ -230,8 +241,9 @@ export default function Leaderboard() {
       diffs[u.uid] = 0;
     });
 
-    // 1. Obtener partidos terminados, ordenados de más reciente a más antiguo
-    const finishedMatches = matches
+    // 1. Obtener partidos terminados de la fase, ordenados de más reciente a más antiguo
+    const phaseMatches = matches.filter(m => (m.phase || 'grupos') === activePhase);
+    const finishedMatches = phaseMatches
       .filter(m => m.status === 'finished')
       .sort((a, b) => new Date(b.kickoffTime).getTime() - new Date(a.kickoffTime).getTime());
 
@@ -272,7 +284,7 @@ export default function Leaderboard() {
       }
       return {
         uid: user.uid,
-        prevPoints: user.totalPoints - lastMatchPoints,
+        prevPoints: user.displayPoints - lastMatchPoints,
         prevGoalHits: (user.goalHits || 0) - lastMatchGoalHits,
         prevExactHits: (user.exactHits || 0) - lastMatchExactHit
       };
@@ -308,7 +320,7 @@ export default function Leaderboard() {
       <div className="bg-slate-800/80 p-4 border-b border-slate-700/50 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-yellow-500" />
-          <h2 className="text-lg font-bold text-white">Tabla de Posiciones</h2>
+          <h2 className="text-lg font-bold text-white">Tabla de Posiciones ({availablePhases.find(p => p.id === activePhase)?.label})</h2>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-sky-400 bg-sky-950/30 px-2 py-0.5 rounded border border-sky-500/20 font-semibold">
@@ -382,7 +394,7 @@ export default function Leaderboard() {
               <div className="flex items-center gap-3">
                 <div className="flex items-baseline gap-1 text-right">
                   <span className={`text-xl ${rank <= 3 ? rankColor : 'text-emerald-400 font-semibold'}`}>
-                    {user.totalPoints}
+                    {user.displayPoints}
                   </span>
                   <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">pts</span>
                 </div>

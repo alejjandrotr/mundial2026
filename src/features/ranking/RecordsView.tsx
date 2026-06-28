@@ -7,6 +7,7 @@ import { toTitleCase } from '../../utils/format';
 import { generateBarChartRaceCSV } from '../../utils/barchart';
 import { calculateAllGroupStandings, getBestThirdPlaceTeams } from '../../utils/standings';
 import BarChartRace from './BarChartRace';
+import { usePhase } from '../../context/PhaseContext';
 
 interface UserRecordStats extends Usuario {
   exactHits: number;
@@ -24,6 +25,7 @@ export default function RecordsView() {
   const [predictions, setPredictions] = useState<Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>>>({});
   const [loading, setLoading] = useState(true);
   const [showBarChartRace, setShowBarChartRace] = useState(false);
+  const { activePhase } = usePhase();
 
   useEffect(() => {
     // 1. Escuchar partidos
@@ -82,8 +84,11 @@ export default function RecordsView() {
 
   // Calcular las estadísticas para cada usuario en base a predicciones y partidos reales
   const computedRecords = useMemo<UserRecordStats[]>(() => {
+    const isGroups = activePhase === 'grupos';
+    const phaseMatches = matches.filter(m => (m.phase || 'grupos') === activePhase);
+
     // Ordenar partidos finalizados cronológicamente para el cálculo de rachas
-    const chronMatches = [...matches]
+    const chronMatches = [...phaseMatches]
       .filter(m => m.status === 'finished' && m.homeGoals !== null && m.awayGoals !== null)
       .sort((a, b) => {
         const timeA = a.kickoffTime?.toDate ? a.kickoffTime.toDate().getTime() : new Date(a.kickoffTime).getTime();
@@ -91,39 +96,41 @@ export default function RecordsView() {
         return timeA - timeB;
       });
 
-    // --- LÓGICA PARA CLASIFICADOS OFICIALES ---
+    // --- LÓGICA PARA CLASIFICADOS OFICIALES (SOLO GRUPOS) ---
     const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-    const getOfficialGoals = (matchId: string) => {
-      const match = matches.find(m => m.id === matchId);
-      if (match && match.homeGoals !== null && match.awayGoals !== null) {
-        return { homeGoals: match.homeGoals, awayGoals: match.awayGoals };
-      }
-      return null;
-    };
-    const officialStandings = calculateAllGroupStandings(matches, groups, getOfficialGoals);
-    const officialBestThirds = getBestThirdPlaceTeams(officialStandings);
-    
     const officialQualifiers: { team: string; type: '1st' | '2nd' | '3rd'; group: string }[] = [];
     const officialQualifierNames = new Set<string>();
 
-    groups.forEach(g => {
-      const groupStandings = officialStandings[g];
-      if (groupStandings.length > 0 && groupStandings[0].played > 0) {
-        officialQualifiers.push({ team: groupStandings[0].name, type: '1st', group: g });
-        officialQualifierNames.add(groupStandings[0].name);
-      }
-      if (groupStandings.length > 1 && groupStandings[1].played > 0) {
-        officialQualifiers.push({ team: groupStandings[1].name, type: '2nd', group: g });
-        officialQualifierNames.add(groupStandings[1].name);
-      }
-    });
+    if (isGroups) {
+      const getOfficialGoals = (matchId: string) => {
+        const match = matches.find(m => m.id === matchId);
+        if (match && match.homeGoals !== null && match.awayGoals !== null) {
+          return { homeGoals: match.homeGoals, awayGoals: match.awayGoals };
+        }
+        return null;
+      };
+      const officialStandings = calculateAllGroupStandings(matches, groups, getOfficialGoals);
+      const officialBestThirds = getBestThirdPlaceTeams(officialStandings);
+      
+      groups.forEach(g => {
+        const groupStandings = officialStandings[g];
+        if (groupStandings.length > 0 && groupStandings[0].played > 0) {
+          officialQualifiers.push({ team: groupStandings[0].name, type: '1st', group: g });
+          officialQualifierNames.add(groupStandings[0].name);
+        }
+        if (groupStandings.length > 1 && groupStandings[1].played > 0) {
+          officialQualifiers.push({ team: groupStandings[1].name, type: '2nd', group: g });
+          officialQualifierNames.add(groupStandings[1].name);
+        }
+      });
 
-    officialBestThirds.slice(0, 8).forEach(t => {
-      if (t.played > 0) {
-        officialQualifiers.push({ team: t.name, type: '3rd', group: t.group });
-        officialQualifierNames.add(t.name);
-      }
-    });
+      officialBestThirds.slice(0, 8).forEach(t => {
+        if (t.played > 0) {
+          officialQualifiers.push({ team: t.name, type: '3rd', group: t.group });
+          officialQualifierNames.add(t.name);
+        }
+      });
+    }
     // ------------------------------------------
 
     return users.map(user => {
@@ -140,7 +147,7 @@ export default function RecordsView() {
       let currentStreak = 0;
 
       // Calcular estadísticas generales
-      matches.forEach(match => {
+      phaseMatches.forEach(match => {
         if (match.status === 'finished' && match.homeGoals !== null && match.awayGoals !== null) {
           const pred = userPreds[match.id];
           if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
@@ -188,47 +195,54 @@ export default function RecordsView() {
         }
       });
 
-      // --- LÓGICA PARA CLASIFICADOS DEL USUARIO ---
-      const getUserGoals = (matchId: string) => {
-        const pred = userPreds[matchId];
-        if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
-          return { homeGoals: pred.homeGoals, awayGoals: pred.awayGoals };
-        }
-        return null;
-      };
+      // --- LÓGICA PARA CLASIFICADOS DEL USUARIO (SOLO GRUPOS) ---
+      if (isGroups) {
+        const getUserGoals = (matchId: string) => {
+          const pred = userPreds[matchId];
+          if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
+            return { homeGoals: pred.homeGoals, awayGoals: pred.awayGoals };
+          }
+          return null;
+        };
 
-      const userStandings = calculateAllGroupStandings(matches, groups, getUserGoals);
-      const userBestThirds = getBestThirdPlaceTeams(userStandings);
-      
-      const userQualifiers: { team: string; type: '1st' | '2nd' | '3rd'; group: string }[] = [];
-      
-      groups.forEach(g => {
-        const groupStandings = userStandings[g];
-        if (groupStandings.length > 0 && groupStandings[0].played > 0) {
-          userQualifiers.push({ team: groupStandings[0].name, type: '1st', group: g });
-        }
-        if (groupStandings.length > 1 && groupStandings[1].played > 0) {
-          userQualifiers.push({ team: groupStandings[1].name, type: '2nd', group: g });
-        }
-      });
-      userBestThirds.slice(0, 8).forEach(t => {
-        if (t.played > 0) {
-          userQualifiers.push({ team: t.name, type: '3rd', group: t.group });
-        }
-      });
-
-      userQualifiers.forEach(uq => {
-        // Verificar Acierto Exacto
-        const exactMatch = officialQualifiers.find(oq => oq.team === uq.team && oq.type === uq.type && oq.group === uq.group);
-        if (exactMatch) qualifiersExactHits++;
+        const userStandings = calculateAllGroupStandings(matches, groups, getUserGoals);
+        const userBestThirds = getBestThirdPlaceTeams(userStandings);
         
-        // Verificar Acierto General
-        if (officialQualifierNames.has(uq.team)) qualifiersAnyHits++;
-      });
+        const userQualifiers: { team: string; type: '1st' | '2nd' | '3rd'; group: string }[] = [];
+        
+        groups.forEach(g => {
+          const groupStandings = userStandings[g];
+          if (groupStandings.length > 0 && groupStandings[0].played > 0) {
+            userQualifiers.push({ team: groupStandings[0].name, type: '1st', group: g });
+          }
+          if (groupStandings.length > 1 && groupStandings[1].played > 0) {
+            userQualifiers.push({ team: groupStandings[1].name, type: '2nd', group: g });
+          }
+        });
+        userBestThirds.slice(0, 8).forEach(t => {
+          if (t.played > 0) {
+            userQualifiers.push({ team: t.name, type: '3rd', group: t.group });
+          }
+        });
+
+        userQualifiers.forEach(uq => {
+          // Verificar Acierto Exacto
+          const exactMatch = officialQualifiers.find(oq => oq.team === uq.team && oq.type === uq.type && oq.group === uq.group);
+          if (exactMatch) qualifiersExactHits++;
+          
+          // Verificar Acierto General
+          if (officialQualifierNames.has(uq.team)) qualifiersAnyHits++;
+        });
+      }
       // --------------------------------------------
+      
+      const phaseTotalPoints = isGroups 
+        ? (user.phaseStats?.[activePhase]?.totalPoints ?? user.totalPoints) 
+        : (user.phaseStats?.[activePhase]?.totalPoints ?? 0);
 
       return {
         ...user,
+        totalPoints: phaseTotalPoints, // Sobrescribir con los puntos de la fase para que se use en desempates
         exactHits,
         goalHits,
         outcomeHits,
@@ -238,7 +252,7 @@ export default function RecordsView() {
         avgDistanceToOfficial: predictedMatchesCount > 0 ? parseFloat((totalDistance / predictedMatchesCount).toFixed(2)) : 999
       };
     });
-  }, [users, matches, predictions]);
+  }, [users, matches, predictions, activePhase]);
 
   // Rankings específicos ordenados
   const topGoalHits = useMemo(() => {
@@ -452,8 +466,9 @@ export default function RecordsView() {
           5
         )}
         
-        {/* Top Clasificados (Cualquier) */}
-        {renderRankList(
+        
+        {/* Top Clasificados (Cualquier) - SOLO GRUPOS */}
+        {activePhase === 'grupos' && renderRankList(
           "Top Clasificados (Cualquier)",
           "Acertó que el equipo clasificaba",
           <MapPin className="w-5 h-5 text-purple-400" />,
@@ -463,8 +478,8 @@ export default function RecordsView() {
           "bg-purple-950/30 text-purple-400 border-purple-500/20"
         )}
         
-        {/* Top Clasificados (Exactos) */}
-        {renderRankList(
+        {/* Top Clasificados (Exactos) - SOLO GRUPOS */}
+        {activePhase === 'grupos' && renderRankList(
           "Top Clasificados (Exactos)",
           "Acertó el equipo y su posición exacta",
           <Crosshair className="w-5 h-5 text-fuchsia-400" />,

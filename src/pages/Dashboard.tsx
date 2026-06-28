@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { usePhase } from '../context/PhaseContext';
 import { LogOut, Trophy, Database, Gamepad2, Play, Table, Settings, Lock, Unlock, KeyRound, Award } from 'lucide-react';
 import Leaderboard from '../features/ranking/Leaderboard';
 import MatchList from '../features/matches/MatchList';
@@ -7,13 +8,15 @@ import QuinielaForm from '../features/predictions/QuinielaForm';
 import ComparisonGrid from '../features/predictions/ComparisonGrid';
 import AdminPanel from '../features/admin/AdminPanel';
 import DangerZone from '../features/admin/DangerZone';
-import QualifiersView from '../features/predictions/QualifiersView';
 import RecordsView from '../features/ranking/RecordsView';
 import { seedMockMatches, simulateRealScores } from '../utils/seed';
+import { migrateDataToPhaseStats } from '../utils/migrateGroups';
+import { seed32avosMatches } from '../utils/seed32avos';
 
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'live' | 'quiniela' | 'comparison' | 'admin' | 'clasificados' | 'records'>('quiniela');
+  const { activePhase, setActivePhase, availablePhases } = usePhase();
+  const [activeTab, setActiveTab] = useState<'live' | 'quiniela' | 'comparison' | 'admin' | 'records'>('quiniela');
   const quinielaGroup = 'A';
 
   const [devUnlocked, setDevUnlocked] = useState(false);
@@ -44,6 +47,21 @@ export default function Dashboard() {
       alert('¡Resultados simulados con éxito! Refresca o vuelve a ingresar para ver los marcadores reales en el Mundial y la Comparativa.');
     }
   };
+
+  const handleMigrate = async () => {
+    if (confirm('¿Estás seguro de migrar los puntos de la fase de grupos a phaseStats?')) {
+      await migrateDataToPhaseStats();
+      alert('¡Migración completada! Refresca para ver los cambios.');
+    }
+  };
+
+  const handleSeed32 = async () => {
+    if (confirm('¿Estás seguro de inyectar los partidos de 32avos de final?')) {
+      await seed32avosMatches();
+      alert('¡Partidos de 32avos inyectados con éxito! Refresca para ver los cambios.');
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-slate-950 text-white p-2 sm:p-4 relative overflow-hidden">
@@ -79,6 +97,23 @@ export default function Dashboard() {
       </header>
 
       <main className="max-w-full xl:max-w-[1600px] mx-auto relative">
+        {/* Fila de Pestañas de Fases */}
+        <div className="no-print flex bg-slate-900/60 border border-slate-800/70 p-1.5 rounded-2xl mb-6 gap-2 w-full overflow-x-auto shadow-inner hide-scrollbar">
+          {availablePhases.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setActivePhase(p.id)}
+              className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black transition-all whitespace-nowrap border ${
+                activePhase === p.id
+                  ? 'bg-worldcup-purple/20 text-white border-worldcup-purple/50 shadow-[0_0_15px_rgba(114,9,183,0.3)]'
+                  : 'text-slate-400 bg-slate-950/50 border-transparent hover:bg-slate-800 hover:text-slate-200'
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
         {/* Selector de Pestañas Principal */}
         <div className="no-print flex bg-slate-900/60 border border-slate-800/70 p-1.5 rounded-2xl backdrop-blur-md max-w-3xl mb-8 gap-1 shadow-inner flex-wrap md:flex-nowrap">
           <button
@@ -117,17 +152,7 @@ export default function Dashboard() {
             Resultados
           </button>
 
-          <button
-            onClick={() => setActiveTab('clasificados')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[110px] ${
-              activeTab === 'clasificados'
-                ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-            }`}
-          >
-            <Trophy className="w-4 h-4" />
-            Clasificados
-          </button>
+
 
           <button
             onClick={() => setActiveTab('records')}
@@ -161,10 +186,6 @@ export default function Dashboard() {
 
         {activeTab === 'comparison' && (
           <ComparisonGrid />
-        )}
-
-        {activeTab === 'clasificados' && (
-          <QualifiersView />
         )}
 
         {activeTab === 'records' && (
@@ -258,6 +279,24 @@ export default function Dashboard() {
                   >
                     <Play className="w-4 h-4 text-emerald-400 fill-emerald-400/10 animate-pulse" />
                     Simular Resultados Reales (Mundial)
+                  </button>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-800/60">
+                  <p className="text-xs text-slate-400 font-medium">3. Scripts de Fase 2 (32avos):</p>
+                  <button
+                    onClick={handleMigrate}
+                    className="flex items-center gap-2 text-xs font-bold bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 px-4 py-2.5 rounded-xl transition-all w-full cursor-pointer"
+                  >
+                    <Database className="w-4 h-4 text-purple-400" />
+                    Ejecutar Migración de Grupos
+                  </button>
+                  <button
+                    onClick={handleSeed32}
+                    className="flex items-center gap-2 text-xs font-bold bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 px-4 py-2.5 rounded-xl transition-all w-full cursor-pointer"
+                  >
+                    <Database className="w-4 h-4 text-purple-400" />
+                    Cargar 16 Partidos (32avos)
                   </button>
                 </div>
               </div>

@@ -5,7 +5,8 @@ import { getCachedMatches, getCachedUsers, getCachedPredictions } from '../../ut
 import { Loader2, Table, ShieldAlert, RefreshCw, FlaskConical, Lock, Printer } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { isLockedForOthers as getIsLockedForOthers } from '../../config/constants';
+import { usePhase } from '../../context/PhaseContext';
+import { isPrivacyEnabledForPhase } from '../../config/constants';
 import MatchFlyerModal from './MatchFlyerModal';
 
 export function abbreviateTeam(name: string): string {
@@ -77,6 +78,23 @@ export default function ComparisonGrid() {
   const [selectedMatchForFlyer, setSelectedMatchForFlyer] = useState<Partido | null>(null);
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { activePhase, availablePhases } = usePhase();
+
+  const phaseMatches = useMemo(() => {
+    const isGroups = activePhase === 'grupos';
+    const filtered = matches.filter(m => (m.phase || 'grupos') === activePhase);
+    return isGroups 
+      ? filtered 
+      : filtered.sort((a, b) => {
+          const da = a.kickoffTime?.toDate ? a.kickoffTime.toDate() : new Date(a.kickoffTime);
+          const db = b.kickoffTime?.toDate ? b.kickoffTime.toDate() : new Date(b.kickoffTime);
+          return da.getTime() - db.getTime();
+        });
+  }, [matches, activePhase]);
+
+  const phaseLockedForOthers = useMemo(() => {
+    return isPrivacyEnabledForPhase(activePhase);
+  }, [activePhase]);
 
   const sortedUsers = useMemo(() => {
     if (!currentUser) return users;
@@ -117,9 +135,7 @@ export default function ComparisonGrid() {
     }, 150);
   };
 
-  const isLockedForOthers = useMemo(() => {
-    return getIsLockedForOthers();
-  }, []);
+
 
   const loadGridData = useCallback(async (forceRefresh = false) => {
     try {
@@ -223,12 +239,12 @@ export default function ComparisonGrid() {
           }
         `}} />
       )}
-      {isLockedForOthers && (
+      {phaseLockedForOthers && (
         <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-4 flex items-start gap-3 text-amber-400 backdrop-blur-sm animate-fadeIn">
           <Lock className="w-5 h-5 flex-shrink-0 mt-0.5 animate-pulse text-amber-400" />
           <div className="text-xs">
             <h4 className="font-bold text-sm text-white mb-0.5">🔒 Modo Privado Activo</h4>
-            <p className="text-slate-350 leading-relaxed">Por políticas de juego limpio, los pronósticos de los demás usuarios estarán ocultos hasta el <strong>11 de junio de 2026 a las 14:40 UTC</strong>. ¡Tus propias predicciones siguen siendo visibles para ti!</p>
+            <p className="text-slate-350 leading-relaxed">Por políticas de juego limpio, los pronósticos de los demás usuarios estarán ocultos hasta que inicie el primer partido de la fase. ¡Tus propias predicciones siguen siendo visibles para ti!</p>
           </div>
         </div>
       )}
@@ -240,7 +256,7 @@ export default function ComparisonGrid() {
           </div>
           <div>
             <h2 className="text-lg font-bold text-white tracking-tight">Planilla Comparativa (Excel)</h2>
-            <p className="text-slate-400 text-xs">Compara tus pronósticos codo a codo con los demás participantes</p>
+            <p className="text-slate-400 text-xs">Compara tus pronósticos de la fase {availablePhases.find(p => p.id === activePhase)?.label} con los demás</p>
           </div>
         </div>
 
@@ -329,7 +345,7 @@ export default function ComparisonGrid() {
                   </tr>
                 </thead>
                 <tbody>
-                  {matches.map((match) => {
+                  {phaseMatches.map((match) => {
                     const hasRealResult = match.status === 'finished' || match.status === 'in_progress';
                     const realH = match.homeGoals;
                     const realV = match.awayGoals;
@@ -348,7 +364,7 @@ export default function ComparisonGrid() {
                           const userPreds = predictions[user.uid] || {};
                           const pred = userPreds[match.id];
 
-                          if (isLockedForOthers && !isSelf) {
+                          if (phaseLockedForOthers && !isSelf) {
                             return (
                               <td key={user.uid} className="py-1 px-2 text-center text-slate-400 border border-slate-300 font-mono text-[9px]">
                                 🔒
@@ -419,7 +435,7 @@ export default function ComparisonGrid() {
                           <span className={`font-semibold truncate max-w-28 ${isSelf ? 'text-emerald-300 font-extrabold' : 'text-slate-100'}`}>
                             {getUserName(user.displayName)} {isSelf && '(Tú)'}
                           </span>
-                          <span className="text-[10px] text-emerald-400 font-mono font-bold mt-0.5">{user.totalPoints || 0} pts</span>
+                          <span className="text-[10px] text-emerald-400 font-mono font-bold mt-0.5">{user.phaseStats?.[activePhase]?.totalPoints || 0} pts</span>
                         </div>
                       </th>
                     );
@@ -427,7 +443,7 @@ export default function ComparisonGrid() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60">
-                {matches.map((match) => {
+                {phaseMatches.map((match) => {
                   const hasRealResult = match.status === 'finished' || match.status === 'in_progress';
                   const realH = match.homeGoals;
                   const realV = match.awayGoals;
@@ -442,7 +458,7 @@ export default function ComparisonGrid() {
                           title="Ver resumen y batacazo del partido"
                         >
                           <span className="bg-slate-800 border border-slate-700/50 text-slate-400 text-[10px] font-mono px-1.5 py-0.5 rounded mr-2 uppercase">
-                            G{match.group}
+                            {match.phase === 'grupos' || !match.phase ? `G${match.group}` : activePhase}
                           </span>
                           <span>{getTeamName(match.homeTeam)} vs {getTeamName(match.awayTeam)}</span>
                         </div>
@@ -468,7 +484,7 @@ export default function ComparisonGrid() {
                         const userPreds = predictions[user.uid] || {};
                         const pred = userPreds[match.id];
 
-                        if (isLockedForOthers && !isSelf) {
+                        if (phaseLockedForOthers && !isSelf) {
                           return (
                             <td key={user.uid} className="py-3 px-4 text-center text-slate-500 border-l border-slate-800/60 bg-slate-950/[0.08]" title="Oculto por juego limpio">
                               <div className="flex items-center justify-center">
@@ -555,7 +571,7 @@ export default function ComparisonGrid() {
           predictions={predictions}
           onClose={() => setSelectedMatchForFlyer(null)}
           currentUserUid={currentUser?.uid}
-          isLockedForOthers={isLockedForOthers}
+          isLockedForOthers={phaseLockedForOthers}
         />
       )}
     </div>

@@ -7,6 +7,14 @@ export interface Usuario {
   exactHits?: number;
   goalHits?: number;
   outcomeHits?: number;
+  phaseStats?: {
+    [phase: string]: {
+      totalPoints: number;
+      exactHits: number;
+      goalHits: number;
+      outcomeHits: number;
+    }
+  };
 }
 
 export interface Partido {
@@ -18,6 +26,7 @@ export interface Partido {
   homeGoals: number | null;
   awayGoals: number | null;
   group?: string;
+  phase?: string; // e.g. 'grupos', '32avos', '16avos', etc.
 }
 
 export interface Prediccion {

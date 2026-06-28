@@ -190,7 +190,7 @@ export default function AdminPanel() {
   };
 
   // Commit points & match scores to Firestore
-  const handleConfirmDistribution = async (userUpdates: Record<string, number>) => {
+  const handleConfirmDistribution = async (userUpdates: Record<string, { globalPoints: number; phasePoints: number }>) => {
     try {
       const batch = writeBatch(db);
       
@@ -203,10 +203,12 @@ export default function AdminPanel() {
       });
 
       // 2. Update User scores
-      Object.entries(userUpdates).forEach(([userId, newPoints]) => {
+      Object.entries(userUpdates).forEach(([userId, points]) => {
         const userRef = doc(db, 'usuarios', userId);
+        const matchPhase = selectedMatch?.phase || 'grupos';
         batch.update(userRef, {
-          totalPoints: newPoints
+          totalPoints: points.globalPoints,
+          [`phaseStats.${matchPhase}.totalPoints`]: points.phasePoints
         });
       });
 
@@ -290,7 +292,7 @@ export default function AdminPanel() {
                 >
                   {matches.map((m) => (
                     <option key={m.id} value={m.id}>
-                      [{m.status === 'finished' ? 'Finalizado' : m.status === 'in_progress' ? 'En Vivo' : 'Pendiente'}] • Grupo {m.group} • {m.homeTeam} vs {m.awayTeam}
+                      [{m.status === 'finished' ? 'Finalizado' : m.status === 'in_progress' ? 'En Vivo' : 'Pendiente'}] • Fase: {m.phase || 'grupos'} • {m.homeTeam} vs {m.awayTeam}
                     </option>
                   ))}
                 </select>
@@ -468,7 +470,7 @@ export default function AdminPanel() {
                 >
                   <div className="flex items-center gap-3">
                     <span className="bg-slate-800 text-slate-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase">
-                      G{m.group}
+                      {m.phase || 'G' + m.group}
                     </span>
                     <span className="font-extrabold text-xs text-white">
                       {m.homeTeam} vs {m.awayTeam}
