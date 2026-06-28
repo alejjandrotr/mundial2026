@@ -467,7 +467,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
                   </div>
 
                   {/* Fila central: Equipos y Marcadores */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
+                  <div className="flex flex-col items-center justify-between gap-2 sm:gap-4 w-full">
                     {/* Marcador e Inputs */}
                     <div className="flex items-center justify-center gap-3 sm:gap-6 flex-1 w-full order-1">
                       {/* Equipo Local */}
