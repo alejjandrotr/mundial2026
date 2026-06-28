@@ -279,7 +279,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
 
           // Calcular puntos ganados en tiempo real si el partido real ya se jugó
           const match = matches.find((m) => m.id === matchId);
-          if (match && (match.status === 'finished' || match.status === 'in_progress')) {
+          if (match && (match.status === 'finished' || match.status === 'in_progress') && (match.phase || 'grupos') === activePhase) {
             const scoreResult = calculateMatchPoints(homeGVal, awayGVal, match.homeGoals, match.awayGoals);
             userAccumulatedPoints += scoreResult.points;
           }
