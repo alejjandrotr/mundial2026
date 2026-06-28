@@ -169,6 +169,9 @@ export default function WhatIfSimulator() {
     });
 
     Object.values(simulatedMatches).forEach((sm) => {
+      const originalMatch = matches.find(m => m.id === sm.id);
+      if (!originalMatch || (originalMatch.phase || 'grupos') !== activePhase) return;
+
       const homeG = sm.homeGoals !== '' ? parseInt(sm.homeGoals, 10) : null;
       const awayG = sm.awayGoals !== '' ? parseInt(sm.awayGoals, 10) : null;
 
