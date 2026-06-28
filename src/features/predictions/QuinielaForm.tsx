@@ -28,6 +28,7 @@ export interface CalculatedTeam {
 interface PredictionState {
   homeGoals: string;
   awayGoals: string;
+  winner?: 'home' | 'away' | null;
 }
 
 interface QuinielaFormProps {
@@ -82,6 +83,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
           predictionsMap[data.partidoId] = {
             homeGoals: data.homeGoals !== null ? String(data.homeGoals) : '',
             awayGoals: data.awayGoals !== null ? String(data.awayGoals) : '',
+            winner: data.winner || null,
           };
         });
 
@@ -112,6 +114,18 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
     if (saveStatus !== 'idle') {
       setSaveStatus('idle');
     }
+  };
+
+  const handleWinnerChange = (matchId: string, winner: 'home' | 'away') => {
+    if (isLocked) return;
+    setPredictions((prev) => ({
+      ...prev,
+      [matchId]: {
+        ...prev[matchId],
+        winner,
+      },
+    }));
+    if (saveStatus !== 'idle') setSaveStatus('idle');
   };
 
   // Calcular las tablas de posiciones dinámicamente
@@ -219,6 +233,23 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
   // Guardar la quiniela completa de forma masiva en la BD
   const handleSaveAll = async () => {
     if (!currentUser || isLocked) return;
+
+    // Check for missing tie-breakers in knockout stages
+    const invalidTie = Object.entries(predictions).some(([matchId, pred]) => {
+      const match = matches.find(m => m.id === matchId);
+      if (!match || (match.phase || 'grupos') === 'grupos') return false;
+      
+      if (pred.homeGoals !== '' && pred.awayGoals !== '' && pred.homeGoals === pred.awayGoals) {
+        return !pred.winner;
+      }
+      return false;
+    });
+
+    if (invalidTie) {
+      alert('Hay partidos con empate en donde no has seleccionado al ganador para el desempate. Por favor revisa tus predicciones.');
+      return;
+    }
+
     try {
       setSaving(true);
       setSaveStatus('idle');
@@ -242,6 +273,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
             partidoId: matchId,
             homeGoals: homeGVal,
             awayGoals: awayGVal,
+            winner: (homeGVal !== null && awayGVal !== null && homeGVal === awayGVal && activePhase !== 'grupos') ? (pred.winner || null) : null,
             pointsEarned: null, // Se calculará después al finalizar los partidos
           }, { merge: true });
 
@@ -489,6 +521,44 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
                         <span>{match.awayTeam}</span>
                       </div>
                     </div>
+
+                    {/* Tie breaker UI for knockout stages */}
+                    {!isGroups && predHomeNum !== null && predAwayNum !== null && predHomeNum === predAwayNum && (
+                      <div className="w-full mt-2 pt-2 border-t border-slate-800/60 flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest bg-slate-900 px-2 py-1 rounded-md border border-slate-800">
+                          Desempate (Ganador)
+                        </span>
+                        <div className="flex items-center gap-4 bg-slate-950/40 p-2 rounded-xl border border-slate-800/60">
+                          <label className="flex items-center gap-1.5 cursor-pointer">
+                            <input 
+                              type="radio" 
+                              name={`winner-${match.id}`} 
+                              checked={pred.winner === 'home'}
+                              onChange={() => handleWinnerChange(match.id, 'home')}
+                              disabled={isLocked}
+                              className="accent-emerald-500 w-3.5 h-3.5"
+                            />
+                            <span className={`text-xs font-bold transition-colors ${pred.winner === 'home' ? 'text-emerald-400' : 'text-slate-400'}`}>
+                              {match.homeTeam}
+                            </span>
+                          </label>
+                          <div className="w-px h-4 bg-slate-800" />
+                          <label className="flex items-center gap-1.5 cursor-pointer">
+                            <input 
+                              type="radio" 
+                              name={`winner-${match.id}`} 
+                              checked={pred.winner === 'away'}
+                              onChange={() => handleWinnerChange(match.id, 'away')}
+                              disabled={isLocked}
+                              className="accent-emerald-500 w-3.5 h-3.5"
+                            />
+                            <span className={`text-xs font-bold transition-colors ${pred.winner === 'away' ? 'text-emerald-400' : 'text-slate-400'}`}>
+                              {match.awayTeam}
+                            </span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Fila inferior: Detalle de resultado real si se jugó */}

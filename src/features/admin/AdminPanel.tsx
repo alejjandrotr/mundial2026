@@ -4,7 +4,8 @@ import { db } from '../../config/firebase';
 import type { Partido, Usuario } from '../../models/types';
 import { getCachedMatches, getCachedUsers, clearCache } from '../../utils/cache';
 import PointsShowModal from './PointsShowModal';
-import { Play, RefreshCw, PenSquare, Terminal, Settings, AlertTriangle } from 'lucide-react';
+import { calculateMatchPoints } from '../../utils/scoring';
+import { Play, RefreshCw, PenSquare, Terminal, Settings, AlertTriangle, RotateCcw } from 'lucide-react';
 
 export default function AdminPanel() {
   const [matches, setMatches] = useState<Partido[]>([]);
@@ -17,6 +18,7 @@ export default function AdminPanel() {
   const [homeGoals, setHomeGoals] = useState<string>('');
   const [awayGoals, setAwayGoals] = useState<string>('');
   const [matchStatus, setMatchStatus] = useState<'pending' | 'in_progress' | 'finished'>('finished');
+  const [winner, setWinner] = useState<'home' | 'away' | null>(null);
 
   // Web Scraper simulation state
   const [scraping, setScraping] = useState(false);
@@ -26,6 +28,7 @@ export default function AdminPanel() {
   // Edit Time State
   const [kickoffTimeStr, setKickoffTimeStr] = useState<string>('');
   const [updatingTime, setUpdatingTime] = useState(false);
+  const [reverting, setReverting] = useState(false);
 
   // Points Show Modal State
   const [showPointsModal, setShowPointsModal] = useState(false);
@@ -69,6 +72,7 @@ export default function AdminPanel() {
         setHomeGoals(firstMatch.homeGoals !== null ? String(firstMatch.homeGoals) : '0');
         setAwayGoals(firstMatch.awayGoals !== null ? String(firstMatch.awayGoals) : '0');
         setMatchStatus(firstMatch.status || 'finished');
+        setWinner(firstMatch.winner || null);
         
         const d = firstMatch.kickoffTime?.toDate ? firstMatch.kickoffTime.toDate() : new Date(firstMatch.kickoffTime);
         const tzOffset = d.getTimezoneOffset() * 60000;
@@ -94,6 +98,7 @@ export default function AdminPanel() {
       setHomeGoals(match.homeGoals !== null ? String(match.homeGoals) : '0');
       setAwayGoals(match.awayGoals !== null ? String(match.awayGoals) : '0');
       setMatchStatus(match.status || 'finished');
+      setWinner(match.winner || null);
       setScrapedData(null);
       setScraperLogs([]);
 
@@ -158,6 +163,16 @@ export default function AdminPanel() {
   const handleOpenShow = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMatchId) return;
+    const match = matches.find(m => m.id === selectedMatchId);
+    if (!match) return;
+    
+    // Validar ganador en caso de empate en fase eliminatoria
+    const hG = parseInt(homeGoals, 10);
+    const aG = parseInt(awayGoals, 10);
+    if ((match.phase || 'grupos') !== 'grupos' && hG === aG && !winner) {
+      alert("Por favor, selecciona quién avanza/gana el desempate.");
+      return;
+    }
     
     if (bypassDistribution) {
       const pwd = prompt("Ingrese la contraseña de administrador:");
@@ -171,7 +186,8 @@ export default function AdminPanel() {
         await updateDoc(matchRef, {
           homeGoals: parseInt(homeGoals, 10),
           awayGoals: parseInt(awayGoals, 10),
-          status: matchStatus
+          status: matchStatus,
+          winner: (match.phase || 'grupos') !== 'grupos' && parseInt(homeGoals, 10) === parseInt(awayGoals, 10) ? winner : null
         });
         
         clearCache();
@@ -190,16 +206,18 @@ export default function AdminPanel() {
   };
 
   // Commit points & match scores to Firestore
-  const handleConfirmDistribution = async (userUpdates: Record<string, { globalPoints: number; phasePoints: number }>) => {
+  const handleConfirmDistribution = async (userUpdates: Record<string, { globalPoints: number; phasePoints: number; pointsEarned: number }>) => {
     try {
       const batch = writeBatch(db);
       
       // 1. Update Match score and status
       const matchRef = doc(db, 'partidos', selectedMatchId);
+      const isKnockoutTie = (selectedMatch?.phase || 'grupos') !== 'grupos' && parseInt(homeGoals, 10) === parseInt(awayGoals, 10);
       batch.update(matchRef, {
         homeGoals: parseInt(homeGoals, 10),
         awayGoals: parseInt(awayGoals, 10),
-        status: matchStatus
+        status: matchStatus,
+        winner: isKnockoutTie ? winner : null
       });
 
       // 2. Update User scores
@@ -210,6 +228,12 @@ export default function AdminPanel() {
           totalPoints: points.globalPoints,
           [`phaseStats.${matchPhase}.totalPoints`]: points.phasePoints
         });
+
+        // 3. Update pointsEarned in prediction document
+        const predRef = doc(db, 'predicciones', `prediction_${userId}_${selectedMatchId}`);
+        batch.set(predRef, {
+          pointsEarned: points.pointsEarned
+        }, { merge: true });
       });
 
       // Execute batch
@@ -228,6 +252,58 @@ export default function AdminPanel() {
     } catch (err) {
       console.error('Error al guardar datos oficiales:', err);
       alert('Hubo un error al cerrar el partido en la base de datos.');
+    }
+  };
+
+  const handleRevertPoints = async () => {
+    if (!selectedMatchId) return;
+    const match = matches.find(m => m.id === selectedMatchId);
+    if (!match) return;
+
+    if (!confirm('⚠️ ADVERTENCIA: Estás a punto de revertir los puntos otorgados por este partido.\n\nEl sistema calculará cuántos puntos ganó cada usuario basándose en el RESULTADO OFICIAL ACTUAL y los restará de sus totales. Luego, el partido volverá a estado Pendiente.\n\n¿Estás seguro de continuar?')) {
+      return;
+    }
+
+    try {
+      setReverting(true);
+      const batch = writeBatch(db);
+
+      users.forEach(user => {
+        const userPreds = predictions[user.uid] || {};
+        const pred = userPreds[match.id];
+        if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
+          const scoreResult = calculateMatchPoints(pred.homeGoals, pred.awayGoals, match.homeGoals, match.awayGoals);
+          const pointsEarned = scoreResult.points;
+          if (pointsEarned > 0) {
+            const userRef = doc(db, 'usuarios', user.uid);
+            const matchPhase = match.phase || 'grupos';
+            const currentTotal = user.totalPoints || 0;
+            const currentPhaseTotal = user.phaseStats?.[matchPhase]?.totalPoints || 0;
+            batch.update(userRef, {
+              totalPoints: Math.max(0, currentTotal - pointsEarned),
+              [`phaseStats.${matchPhase}.totalPoints`]: Math.max(0, currentPhaseTotal - pointsEarned)
+            });
+          }
+          // Reset pointsEarned
+          const predRef = doc(db, 'predicciones', `prediction_${user.uid}_${match.id}`);
+          batch.update(predRef, { pointsEarned: null });
+        }
+      });
+
+      // Reset match status
+      const matchRef = doc(db, 'partidos', match.id);
+      batch.update(matchRef, { status: 'pending', homeGoals: null, awayGoals: null, winner: null });
+
+      await batch.commit();
+
+      clearCache();
+      await loadData(true);
+      alert('Puntos revertidos exitosamente. El partido ahora está pendiente y su marcador oficial ha sido borrado.');
+    } catch (err) {
+      console.error('Error al revertir puntos:', err);
+      alert('Hubo un error al revertir los puntos.');
+    } finally {
+      setReverting(false);
     }
   };
 
@@ -400,6 +476,44 @@ export default function AdminPanel() {
                     </div>
                   </div>
 
+                  {/* Tie breaker selection for Admin */}
+                  {selectedMatch && (selectedMatch.phase || 'grupos') !== 'grupos' && homeGoals !== '' && awayGoals !== '' && homeGoals === awayGoals && (
+                    <div className="w-full mt-2 pt-2 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 bg-slate-900 p-3 rounded-xl border-dashed">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest bg-slate-950 px-2 py-1 rounded-md border border-slate-800">
+                        Desempate (Ganador)
+                      </span>
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name={`admin-winner-${selectedMatch.id}`} 
+                            checked={winner === 'home'}
+                            onChange={() => setWinner('home')}
+                            disabled={isFutureMatch}
+                            className="accent-emerald-500 w-3.5 h-3.5"
+                          />
+                          <span className={`text-xs font-bold transition-colors ${winner === 'home' ? 'text-emerald-400' : 'text-slate-400'}`}>
+                            {selectedMatch.homeTeam}
+                          </span>
+                        </label>
+                        <div className="w-px h-4 bg-slate-800" />
+                        <label className="flex items-center gap-1.5 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name={`admin-winner-${selectedMatch.id}`} 
+                            checked={winner === 'away'}
+                            onChange={() => setWinner('away')}
+                            disabled={isFutureMatch}
+                            className="accent-emerald-500 w-3.5 h-3.5"
+                          />
+                          <span className={`text-xs font-bold transition-colors ${winner === 'away' ? 'text-emerald-400' : 'text-slate-400'}`}>
+                            {selectedMatch.awayTeam}
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Status selection */}
                   <div className="space-y-1.5">
                     <label className="text-slate-400 text-xs font-bold uppercase tracking-wider">Estado del Partido:</label>
@@ -437,15 +551,37 @@ export default function AdminPanel() {
                     </label>
                   </div>
 
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={isFutureMatch}
-                    className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 font-black py-3 rounded-xl transition-all shadow-lg shadow-emerald-950/20 flex items-center justify-center gap-2 text-xs uppercase disabled:shadow-none disabled:cursor-not-allowed"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Iniciar Cierre de Partido</span>
-                  </button>
+                  {/* Submit Button or Revert Button */}
+                  {selectedMatch.status === 'finished' ? (
+                    <div className="pt-2 border-t border-slate-800/80 space-y-3">
+                      <div className="text-center">
+                        <span className="bg-red-500/10 text-red-400 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">
+                          Partido Cerrado
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRevertPoints}
+                        disabled={reverting || isFutureMatch}
+                        className="w-full bg-slate-800 hover:bg-red-900/40 border border-slate-700 hover:border-red-500/50 text-slate-300 hover:text-red-400 font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-xs uppercase disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>{reverting ? 'Revirtiendo...' : 'Revertir Puntos y Reabrir Partido'}</span>
+                      </button>
+                      <p className="text-[10px] text-slate-500 text-center px-4 leading-tight">
+                        Si te equivocaste con el resultado, presiona este botón primero para quitar los puntos a los usuarios y limpiar el marcador. Luego podrás registrar el resultado correcto.
+                      </p>
+                    </div>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={isFutureMatch}
+                      className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 font-black py-3 rounded-xl transition-all shadow-lg shadow-emerald-950/20 flex items-center justify-center gap-2 text-xs uppercase disabled:shadow-none disabled:cursor-not-allowed"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Iniciar Cierre de Partido</span>
+                    </button>
+                  )}
                 </>
               )}
             </form>

@@ -27,6 +27,7 @@ export interface Partido {
   awayGoals: number | null;
   group?: string;
   phase?: string; // e.g. 'grupos', '32avos', '16avos', etc.
+  winner?: 'home' | 'away' | null;
 }
 
 export interface Prediccion {
@@ -36,4 +37,5 @@ export interface Prediccion {
   homeGoals: number | null;
   awayGoals: number | null;
   pointsEarned: number | null;
+  winner?: 'home' | 'away' | null;
 }

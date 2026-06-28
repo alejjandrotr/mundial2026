@@ -9,7 +9,7 @@ interface PointsShowModalProps {
   officialAwayGoals: number;
   users: Usuario[];
   predictions: Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>>;
-  onConfirm: (userUpdates: Record<string, { globalPoints: number; phasePoints: number }>) => Promise<void>;
+  onConfirm: (userUpdates: Record<string, { globalPoints: number; phasePoints: number; pointsEarned: number }>) => Promise<void>;
   onClose: () => void;
 }
 
@@ -113,11 +113,12 @@ export default function PointsShowModal({
     try {
       setIsSaving(true);
       // Map user ID to new point totals
-      const updates: Record<string, { globalPoints: number; phasePoints: number }> = {};
+      const updates: Record<string, { globalPoints: number; phasePoints: number; pointsEarned: number }> = {};
       userResults.forEach(r => {
         updates[r.userId] = {
           globalPoints: r.newGlobalPoints,
-          phasePoints: r.newPoints
+          phasePoints: r.newPoints,
+          pointsEarned: r.pointsGained
         };
       });
       await onConfirm(updates);
