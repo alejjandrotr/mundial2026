@@ -2,16 +2,17 @@ import { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, onSnapshot, getDocs, where } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { Usuario, Partido } from '../../models/types';
-import { Medal, Trophy, Share2, Calendar, ArrowUp, ArrowDown, Minus } from 'lucide-react';
-import { calculateMatchPoints } from '../../utils/scoring';
+import { Trophy, Share2, Calendar, ArrowUp, ArrowDown, Minus, Info, Medal } from 'lucide-react';
 import { toTitleCase } from '../../utils/format';
 import { usePhase } from '../../context/PhaseContext';
+import HelpModal from '../../components/HelpModal';
 
 export default function Leaderboard() {
   const [users, setUsers] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [matches, setMatches] = useState<Partido[]>([]);
   const [predictions, setPredictions] = useState<Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>>>({});
+  const [showHelp, setShowHelp] = useState(false);
   const { activePhase, availablePhases } = usePhase();
 
   // Calcular aciertos exactos e individuales de goles de cada usuario en base a partidos jugados y predicciones reales
@@ -54,7 +55,17 @@ export default function Leaderboard() {
       if (b.displayPoints !== a.displayPoints) {
         return b.displayPoints - a.displayPoints;
       }
-      return b.goalHits - a.goalHits;
+      if (b.goalHits !== a.goalHits) {
+        return b.goalHits - a.goalHits;
+      }
+      // Empate total: usar los puntos globales para mantener estabilidad visual
+      const totalB = b.totalPoints || 0;
+      const totalA = a.totalPoints || 0;
+      if (totalB !== totalA) {
+        return totalB - totalA;
+      }
+      // Orden alfabético si todo es igual
+      return (a.displayName || '').localeCompare(b.displayName || '');
     });
   }, [users, matches, predictions, activePhase]);
 
@@ -321,6 +332,13 @@ export default function Leaderboard() {
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-yellow-500" />
           <h2 className="text-lg font-bold text-white">Tabla de Posiciones ({availablePhases.find(p => p.id === activePhase)?.label})</h2>
+          <button 
+            onClick={() => setShowHelp(true)}
+            className="ml-2 bg-slate-700/50 hover:bg-slate-700 text-slate-300 p-1.5 rounded-full transition-colors cursor-pointer"
+            title="Ver sistema de puntuación"
+          >
+            <Info className="w-4 h-4" />
+          </button>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] text-sky-400 bg-sky-950/30 px-2 py-0.5 rounded border border-sky-500/20 font-semibold">
@@ -435,6 +453,8 @@ export default function Leaderboard() {
           </button>
         </div>
       )}
+
+      {showHelp && <HelpModal onClose={() => setShowHelp(false)} />}
     </div>
   );
 }
