@@ -6,6 +6,7 @@ import { Trophy, Share2, Calendar, ArrowUp, ArrowDown, Minus, Info, Medal } from
 import { toTitleCase } from '../../utils/format';
 import { usePhase } from '../../context/PhaseContext';
 import HelpModal from '../../components/HelpModal';
+import { calculateMatchPoints } from '../../utils/scoring';
 
 export default function Leaderboard() {
   const [users, setUsers] = useState<Usuario[]>([]);
