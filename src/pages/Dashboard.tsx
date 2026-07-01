@@ -12,6 +12,7 @@ import RecordsView from '../features/ranking/RecordsView';
 import { seedMockMatches, simulateRealScores } from '../utils/seed';
 import { migrateDataToPhaseStats } from '../utils/migrateGroups';
 import { seed32avosMatches } from '../utils/seed32avos';
+import { sha256, ADMIN_PASSWORD_HASH } from '../utils/crypto';
 
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
@@ -23,9 +24,10 @@ export default function Dashboard() {
   const [devPassword, setDevPassword] = useState('');
   const [devError, setDevError] = useState(false);
 
-  const handleUnlockDev = (e: React.FormEvent) => {
+  const handleUnlockDev = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (devPassword === 'admin') {
+    const hash = await sha256(devPassword);
+    if (hash === ADMIN_PASSWORD_HASH) {
       setDevUnlocked(true);
       setDevError(false);
     } else {
@@ -56,9 +58,9 @@ export default function Dashboard() {
   };
 
   const handleSeed32 = async () => {
-    if (confirm('¿Estás seguro de inyectar los partidos de 32avos de final?')) {
+    if (confirm('¿Estás seguro de inyectar los partidos de 16avos de final?')) {
       await seed32avosMatches();
-      alert('¡Partidos de 32avos inyectados con éxito! Refresca para ver los cambios.');
+      alert('¡Partidos de 16avos inyectados con éxito! Refresca para ver los cambios.');
     }
   };
 
@@ -283,7 +285,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="space-y-2 pt-2 border-t border-slate-800/60">
-                  <p className="text-xs text-slate-400 font-medium">3. Scripts de Fase 2 (32avos):</p>
+                  <p className="text-xs text-slate-400 font-medium">3. Scripts de Fase 2 (16avos):</p>
                   <button
                     onClick={handleMigrate}
                     className="flex items-center gap-2 text-xs font-bold bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 px-4 py-2.5 rounded-xl transition-all w-full cursor-pointer"
@@ -296,7 +298,7 @@ export default function Dashboard() {
                     className="flex items-center gap-2 text-xs font-bold bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 px-4 py-2.5 rounded-xl transition-all w-full cursor-pointer"
                   >
                     <Database className="w-4 h-4 text-purple-400" />
-                    Cargar 16 Partidos (32avos)
+                    Cargar 16 Partidos (16avos)
                   </button>
                 </div>
               </div>

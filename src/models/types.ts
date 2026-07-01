@@ -15,6 +15,7 @@ export interface Usuario {
       outcomeHits: number;
     }
   };
+  mustChangePassword?: boolean;
 }
 
 export interface Partido {

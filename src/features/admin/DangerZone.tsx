@@ -1,15 +1,16 @@
 import { useState, useEffect } from 'react';
-import { collection, doc, getDocs, writeBatch, query, where } from 'firebase/firestore';
+import { collection, doc, getDocs, writeBatch, query, where, updateDoc } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import { getCachedMatches, getCachedUsers, clearCache } from '../../utils/cache';
-import { RefreshCw, Trash2, UserX, Download, Database } from 'lucide-react';
+import { RefreshCw, Trash2, UserX, Download, Database, KeyRound } from 'lucide-react';
 import type { Usuario } from '../../models/types';
 
 export default function DangerZone() {
   const [users, setUsers] = useState<Usuario[]>([]);
   const [usersWithoutPredictions, setUsersWithoutPredictions] = useState<Set<string>>(new Set());
-  const [selectedUserToDelete, setSelectedUserToDelete] = useState<string>('');
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [isDeletingUser, setIsDeletingUser] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
   const loadUsers = async () => {
@@ -45,9 +46,37 @@ export default function DangerZone() {
     loadUsers();
   }, []);
 
+  const handleResetPassword = async () => {
+    if (!selectedUserId) return;
+    const userToReset = users.find(u => u.uid === selectedUserId);
+    if (!userToReset) return;
+
+    if (!window.confirm(`¿Estás seguro de que deseas resetear la contraseña del usuario "${userToReset.displayName}" a "1234"? Se le obligará a cambiarla la próxima vez que inicie sesión.`)) {
+      return;
+    }
+
+    try {
+      setIsResettingPassword(true);
+      const userRef = doc(db, 'usuarios', selectedUserId);
+      await updateDoc(userRef, {
+        password: '1234',
+        mustChangePassword: true
+      });
+      alert(`Contraseña de ${userToReset.displayName} reseteada a "1234" con éxito.`);
+      clearCache();
+      setSelectedUserId('');
+      await loadUsers();
+    } catch (err) {
+      console.error('Error al resetear contraseña:', err);
+      alert('Hubo un error al intentar resetear la contraseña.');
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   const handleDeleteUser = async () => {
-    if (!selectedUserToDelete) return;
-    const userToDel = users.find(u => u.uid === selectedUserToDelete);
+    if (!selectedUserId) return;
+    const userToDel = users.find(u => u.uid === selectedUserId);
     if (!userToDel) return;
 
     if (!window.confirm(`⚠️ ADVERTENCIA: Estás a punto de eliminar permanentemente al usuario "${userToDel.displayName}" y TODAS sus predicciones.\n\n¿Estás completamente seguro de continuar? Esta acción es irreversible.`)) {
@@ -59,14 +88,14 @@ export default function DangerZone() {
       const batch = writeBatch(db);
 
       // 1. Find and delete all predictions
-      const q = query(collection(db, 'predicciones'), where('usuarioId', '==', selectedUserToDelete));
+      const q = query(collection(db, 'predicciones'), where('usuarioId', '==', selectedUserId));
       const snapshot = await getDocs(q);
       snapshot.docs.forEach(docSnap => {
         batch.delete(docSnap.ref);
       });
 
       // 2. Delete the user
-      batch.delete(doc(db, 'usuarios', selectedUserToDelete));
+      batch.delete(doc(db, 'usuarios', selectedUserId));
 
       // 3. Commit
       await batch.commit();
@@ -75,7 +104,7 @@ export default function DangerZone() {
       
       // Clear cache and reload
       clearCache();
-      setSelectedUserToDelete('');
+      setSelectedUserId('');
       await loadUsers();
     } catch (err) {
       console.error('Error al eliminar usuario:', err);
@@ -138,16 +167,16 @@ export default function DangerZone() {
         
         <div className="space-y-2.5 bg-red-950/20 p-3 rounded-xl border border-red-900/20">
           <p className="text-[10px] text-red-300/80 leading-relaxed">
-            Selecciona un usuario para eliminar permanentemente su cuenta y <strong className="text-red-400">TODAS</strong> sus predicciones registradas. Los marcados en <span className="text-red-400 font-bold">rojo con [SIN PREDICCIONES]</span> no han enviado ningún pronóstico.
+            Selecciona un usuario para administrar su cuenta. Puedes restablecer su contraseña temporal a `"1234"` o eliminar permanentemente su cuenta y <strong className="text-red-400">TODAS</strong> sus predicciones. Los marcados en <span className="text-red-400 font-bold">rojo con [SIN PREDICCIONES]</span> no han enviado ningún pronóstico.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col gap-3">
             <select
-              value={selectedUserToDelete}
-              onChange={(e) => setSelectedUserToDelete(e.target.value)}
-              className="flex-1 bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-2 py-1.5 text-[10px] font-semibold focus:outline-none focus:border-red-500 transition-colors"
+              value={selectedUserId}
+              onChange={(e) => setSelectedUserId(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 text-slate-100 rounded-lg px-2 py-2 text-[10px] font-semibold focus:outline-none focus:border-red-500 transition-colors"
             >
-              <option value="">-- Seleccionar Usuario a Eliminar --</option>
+              <option value="">-- Seleccionar Usuario --</option>
               {users.map((u) => {
                 const hasNoPreds = usersWithoutPredictions.has(u.uid);
                 return (
@@ -162,18 +191,33 @@ export default function DangerZone() {
               })}
             </select>
             
-            <button
-              onClick={handleDeleteUser}
-              disabled={!selectedUserToDelete || isDeletingUser}
-              className="bg-red-500 hover:bg-red-600 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold py-1.5 px-3 rounded-lg transition-all shadow flex items-center justify-center gap-1.5 text-[10px] uppercase disabled:shadow-none disabled:cursor-not-allowed whitespace-nowrap"
-            >
-              {isDeletingUser ? (
-                <RefreshCw className="w-3 h-3 animate-spin" />
-              ) : (
-                <Trash2 className="w-3 h-3" />
-              )}
-              Eliminar
-            </button>
+            <div className="flex flex-wrap sm:flex-nowrap gap-2">
+              <button
+                onClick={handleResetPassword}
+                disabled={!selectedUserId || isResettingPassword}
+                className="flex-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 disabled:bg-slate-800/40 disabled:border-transparent disabled:text-slate-500 font-bold py-2 px-3 rounded-lg transition-all shadow flex items-center justify-center gap-1.5 text-[10px] uppercase disabled:shadow-none disabled:cursor-not-allowed whitespace-nowrap cursor-pointer"
+              >
+                {isResettingPassword ? (
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                ) : (
+                  <KeyRound className="w-3 h-3" />
+                )}
+                Resetear Clave (1234)
+              </button>
+
+              <button
+                onClick={handleDeleteUser}
+                disabled={!selectedUserId || isDeletingUser}
+                className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-slate-850 disabled:text-slate-500 text-white font-bold py-2 px-3 rounded-lg transition-all shadow flex items-center justify-center gap-1.5 text-[10px] uppercase disabled:shadow-none disabled:cursor-not-allowed whitespace-nowrap cursor-pointer"
+              >
+                {isDeletingUser ? (
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3 h-3" />
+                )}
+                Eliminar Cuenta
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { getCachedMatches, getCachedUsers, clearCache } from '../../utils/cache'
 import PointsShowModal from './PointsShowModal';
 import { calculateMatchPoints } from '../../utils/scoring';
 import { Play, RefreshCw, PenSquare, Terminal, Settings, AlertTriangle, RotateCcw } from 'lucide-react';
+import { sha256, ADMIN_PASSWORD_HASH } from '../../utils/crypto';
 
 export default function AdminPanel() {
   const [matches, setMatches] = useState<Partido[]>([]);
@@ -173,14 +174,16 @@ export default function AdminPanel() {
       alert("Por favor, selecciona quién avanza/gana el desempate.");
       return;
     }
+
+    // Solicitar contraseña de administrador siempre para cualquier modificación de partido
+    const pwd = prompt("Ingrese la contraseña de administrador para confirmar los cambios:");
+    const hash = pwd ? await sha256(pwd) : '';
+    if (hash !== ADMIN_PASSWORD_HASH) {
+      alert("Contraseña incorrecta o cancelada. Operación cancelada.");
+      return;
+    }
     
     if (bypassDistribution) {
-      const pwd = prompt("Ingrese la contraseña de administrador:");
-      if (pwd !== 'admin') {
-        alert("Contraseña incorrecta o cancelada. Operación cancelada.");
-        return;
-      }
-      
       try {
         const matchRef = doc(db, 'partidos', selectedMatchId);
         await updateDoc(matchRef, {
@@ -261,6 +264,14 @@ export default function AdminPanel() {
     if (!match) return;
 
     if (!confirm('⚠️ ADVERTENCIA: Estás a punto de revertir los puntos otorgados por este partido.\n\nEl sistema calculará cuántos puntos ganó cada usuario basándose en el RESULTADO OFICIAL ACTUAL y los restará de sus totales. Luego, el partido volverá a estado Pendiente.\n\n¿Estás seguro de continuar?')) {
+      return;
+    }
+
+    // Solicitar contraseña de administrador para revertir puntos
+    const pwd = prompt("Ingrese la contraseña de administrador para confirmar la reversión de puntos:");
+    const hash = pwd ? await sha256(pwd) : '';
+    if (hash !== ADMIN_PASSWORD_HASH) {
+      alert("Contraseña incorrecta o cancelada. Operación cancelada.");
       return;
     }
 
@@ -368,7 +379,7 @@ export default function AdminPanel() {
                 >
                   {matches.map((m) => (
                     <option key={m.id} value={m.id}>
-                      [{m.status === 'finished' ? 'Finalizado' : m.status === 'in_progress' ? 'En Vivo' : 'Pendiente'}] • Fase: {m.phase || 'grupos'} • {m.homeTeam} vs {m.awayTeam}
+                      [{m.status === 'finished' ? 'Finalizado' : m.status === 'in_progress' ? 'En Vivo' : 'Pendiente'}] • Fase: {m.phase === '32avos' ? '16avos' : (m.phase || 'grupos')} • {m.homeTeam} vs {m.awayTeam}
                     </option>
                   ))}
                 </select>
@@ -606,7 +617,7 @@ export default function AdminPanel() {
                 >
                   <div className="flex items-center gap-3">
                     <span className="bg-slate-800 text-slate-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase">
-                      {m.phase || 'G' + m.group}
+                      {m.phase === '32avos' ? '16avos' : (m.phase || 'G' + m.group)}
                     </span>
                     <span className="font-extrabold text-xs text-white">
                       {m.homeTeam} vs {m.awayTeam}

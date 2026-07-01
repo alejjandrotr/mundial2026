@@ -144,7 +144,7 @@ export default function PointsShowModal({
 
             <div className="space-y-2">
               <span className="bg-slate-800 border border-slate-700/85 text-emerald-400 text-xs font-mono font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                Fase: {match.phase || 'Grupos'} {match.group ? `• Grupo ${match.group}` : ''}
+                Fase: {match.phase === '32avos' ? '16avos' : (match.phase || 'Grupos')} {match.group ? `• Grupo ${match.group}` : ''}
               </span>
               <h2 className="text-3xl font-black text-white tracking-tight">Cierre de Partido & Puntos</h2>
               <p className="text-slate-400 text-sm max-w-md mx-auto">
@@ -337,7 +337,7 @@ export default function PointsShowModal({
               </div>
 
               <span className="bg-slate-800 text-slate-300 border border-slate-700/50 text-[10px] font-mono px-2 py-0.5 rounded uppercase">
-                Fase: {match.phase || 'grupos'}
+                Fase: {match.phase === '32avos' ? '16avos' : (match.phase || 'grupos')}
               </span>
             </div>
 

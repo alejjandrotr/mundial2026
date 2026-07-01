@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { collection, query, where, getDocs, doc, setDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, setDoc, updateDoc } from "firebase/firestore";
 import { db } from "../config/firebase";
 import type { Usuario } from "../models/types";
 import { toTitleCase } from "../utils/format";
@@ -11,6 +11,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updatePassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   login: async () => {},
   register: async () => {},
   logout: () => {},
+  updatePassword: async () => {},
 });
 
 export function useAuth() {
@@ -66,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: userData.email,
       totalPoints: userData.totalPoints || 0,
       role: userData.role || "user",
+      mustChangePassword: userData.mustChangePassword || false,
     };
 
     localStorage.setItem("currentUser", JSON.stringify(loggedUser));
@@ -111,12 +114,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCurrentUser(null);
   };
 
+  const updatePassword = async (newPassword: string) => {
+    if (!currentUser) throw new Error("No hay usuario autenticado");
+
+    const userRef = doc(db, "usuarios", currentUser.uid);
+    await updateDoc(userRef, {
+      password: newPassword,
+      mustChangePassword: false,
+    });
+
+    const updatedUser: Usuario = {
+      ...currentUser,
+      mustChangePassword: false,
+    };
+
+    localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+    setCurrentUser(updatedUser);
+  };
+
   const value = {
     currentUser,
     loading,
     login,
     register,
     logout,
+    updatePassword,
   };
 
   return (

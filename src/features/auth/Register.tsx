@@ -1,36 +1,6 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Register() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
-  const navigate = useNavigate();
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setError('');
-      setLoading(true);
-      
-      // Call register from our custom AuthContext
-      await register(name, email, password);
-
-      // Redirect to home
-      navigate('/');
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Error al crear la cuenta. Inténtalo de nuevo.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4 relative overflow-hidden">
       {/* Background decoration */}
@@ -46,83 +16,24 @@ export default function Register() {
           <p className="text-slate-400 mt-2">Crea tu cuenta y empieza a predecir</p>
         </div>
 
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl">
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-2xl shadow-2xl text-center">
           <h2 className="text-2xl font-semibold text-white mb-6">Crear Cuenta</h2>
           
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm">
-              {error}
-            </div>
-          )}
+          <div className="bg-red-500/10 border border-red-500/40 text-red-400 px-4 py-4 rounded-xl mb-4 font-semibold text-sm">
+            🚫 Registro de nuevos usuarios deshabilitado
+          </div>
+          
+          <p className="text-slate-350 text-xs leading-relaxed mb-6">
+            Las inscripciones para la Quiniela del Mundial 2026 han sido cerradas temporalmente. Si necesitas acceso o una cuenta de prueba, por favor contacta al administrador del torneo.
+          </p>
 
-          <form onSubmit={handleRegister} className="space-y-5">
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Nombre Completo</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-slate-500" />
-                </div>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="block w-full pl-10 bg-slate-800/50 border border-slate-700 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-colors"
-                  placeholder="Tu nombre"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Correo Electrónico</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-slate-500" />
-                </div>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 bg-slate-800/50 border border-slate-700 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-colors"
-                  placeholder="tu@correo.com"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Contraseña</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-slate-500" />
-                </div>
-                <input
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 bg-slate-800/50 border border-slate-700 rounded-xl py-3 px-4 text-white placeholder-slate-500 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-colors"
-                  placeholder="••••••••"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-3 px-4 rounded-xl transition-all transform hover:scale-[1.02] active:scale-95 flex justify-center items-center shadow-[0_0_15px_rgba(16,185,129,0.4)] disabled:opacity-70 disabled:cursor-not-allowed"
+          <div className="mt-6">
+            <Link 
+              to="/login" 
+              className="inline-block bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-6 rounded-xl text-xs transition-colors border border-slate-700 active:scale-95 transform"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Registrarme'}
-            </button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-slate-400 text-sm">
-              ¿Ya tienes una cuenta?{' '}
-              <Link to="/login" className="text-emerald-400 hover:text-emerald-300 font-medium transition-colors">
-                Inicia sesión aquí
-              </Link>
-            </p>
+              Ir a Iniciar Sesión
+            </Link>
           </div>
         </div>
       </div>

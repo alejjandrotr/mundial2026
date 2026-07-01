@@ -15,7 +15,7 @@ export const PhaseProvider = ({ children }: { children: ReactNode }) => {
 
   const availablePhases: { id: Phase; label: string }[] = [
     { id: 'grupos', label: 'Fase de Grupos' },
-    { id: '32avos', label: '32avos de Final' },
+    { id: '32avos', label: '16avos de Final' },
     // Se irán añadiendo más conforme avancemos
   ];
 

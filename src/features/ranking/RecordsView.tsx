@@ -8,6 +8,7 @@ import { generateBarChartRaceCSV } from '../../utils/barchart';
 import { calculateAllGroupStandings, getBestThirdPlaceTeams } from '../../utils/standings';
 import BarChartRace from './BarChartRace';
 import { usePhase } from '../../context/PhaseContext';
+import { getFlagUrl } from '../../utils/flags';
 
 interface UserRecordStats extends Usuario {
   exactHits: number;
@@ -17,12 +18,14 @@ interface UserRecordStats extends Usuario {
   qualifiersExactHits: number;
   qualifiersAnyHits: number;
   avgDistanceToOfficial: number;
+  knockoutQualifiersHits: number;
+  knockoutQualifiersList: { matchId: string; teamName: string; isUnique: boolean }[];
 }
 
 export default function RecordsView() {
   const [users, setUsers] = useState<Usuario[]>([]);
   const [matches, setMatches] = useState<Partido[]>([]);
-  const [predictions, setPredictions] = useState<Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>>>({});
+  const [predictions, setPredictions] = useState<Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null; winner?: 'home' | 'away' | null }>>>({});
   const [loading, setLoading] = useState(true);
   const [showBarChartRace, setShowBarChartRace] = useState(false);
   const { activePhase } = usePhase();
@@ -56,7 +59,7 @@ export default function RecordsView() {
 
     // 3. Escuchar predicciones
     const unsubscribePreds = onSnapshot(collection(db, 'predicciones'), (snapshot) => {
-      const predsMap: Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>> = {};
+      const predsMap: Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null; winner?: 'home' | 'away' | null }>> = {};
       
       snapshot.forEach((doc) => {
         const data = doc.data();
@@ -64,11 +67,13 @@ export default function RecordsView() {
         const matchId = data.partidoId;
         const homeG = data.homeGoals;
         const awayG = data.awayGoals;
+        const winner = data.winner;
 
         if (!predsMap[userId]) predsMap[userId] = {};
         predsMap[userId][matchId] = {
           homeGoals: homeG !== undefined ? homeG : null,
           awayGoals: awayG !== undefined ? awayG : null,
+          winner: winner !== undefined ? winner : null,
         };
       });
       setPredictions(predsMap);
@@ -95,6 +100,48 @@ export default function RecordsView() {
         const timeB = b.kickoffTime?.toDate ? b.kickoffTime.toDate().getTime() : new Date(b.kickoffTime).getTime();
         return timeA - timeB;
       });
+
+    // Pre-calcular aciertos correctos de clasificados por cada partido de eliminación (si no es fase de grupos)
+    const correctPredictorsByMatch: Record<string, string[]> = {};
+    if (!isGroups) {
+      phaseMatches.forEach(match => {
+        if (match.status === 'finished' && match.homeGoals !== null && match.awayGoals !== null) {
+          let officialWinnerTeam: string | null = null;
+          if (match.homeGoals > match.awayGoals) {
+            officialWinnerTeam = match.homeTeam;
+          } else if (match.homeGoals < match.awayGoals) {
+            officialWinnerTeam = match.awayTeam;
+          } else {
+            officialWinnerTeam = match.winner === 'home' ? match.homeTeam : match.winner === 'away' ? match.awayTeam : null;
+          }
+
+          if (officialWinnerTeam) {
+            const predictors: string[] = [];
+            users.forEach(u => {
+              const uPreds = predictions[u.uid] || {};
+              const pred = uPreds[match.id];
+              if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
+                const predHome = typeof pred.homeGoals === 'string' ? parseInt(pred.homeGoals, 10) : pred.homeGoals;
+                const predAway = typeof pred.awayGoals === 'string' ? parseInt(pred.awayGoals, 10) : pred.awayGoals;
+                let userPredictedWinnerTeam: string | null = null;
+                if (predHome > predAway) {
+                  userPredictedWinnerTeam = match.homeTeam;
+                } else if (predHome < predAway) {
+                  userPredictedWinnerTeam = match.awayTeam;
+                } else {
+                  userPredictedWinnerTeam = pred.winner === 'home' ? match.homeTeam : pred.winner === 'away' ? match.awayTeam : null;
+                }
+
+                if (userPredictedWinnerTeam === officialWinnerTeam) {
+                  predictors.push(u.uid);
+                }
+              }
+            });
+            correctPredictorsByMatch[match.id] = predictors;
+          }
+        }
+      });
+    }
 
     // --- LÓGICA PARA CLASIFICADOS OFICIALES (SOLO GRUPOS) ---
     const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
@@ -235,6 +282,33 @@ export default function RecordsView() {
         });
       }
       // --------------------------------------------
+
+      // --- LÓGICA PARA CLASIFICADOS EN ELIMINATORIAS ---
+      const knockoutQualifiersList: { matchId: string; teamName: string; isUnique: boolean }[] = [];
+      if (!isGroups) {
+        phaseMatches.forEach(match => {
+          const predictors = correctPredictorsByMatch[match.id] || [];
+          if (predictors.includes(user.uid)) {
+            let officialWinnerTeam: string | null = null;
+            if (match.homeGoals! > match.awayGoals!) {
+              officialWinnerTeam = match.homeTeam;
+            } else if (match.homeGoals! < match.awayGoals!) {
+              officialWinnerTeam = match.awayTeam;
+            } else {
+              officialWinnerTeam = match.winner === 'home' ? match.homeTeam : match.winner === 'away' ? match.awayTeam : null;
+            }
+
+            if (officialWinnerTeam) {
+              knockoutQualifiersList.push({
+                matchId: match.id,
+                teamName: officialWinnerTeam,
+                isUnique: predictors.length === 1
+              });
+            }
+          }
+        });
+      }
+      // --------------------------------------------
       
       const phaseTotalPoints = isGroups 
         ? (user.phaseStats?.[activePhase]?.totalPoints ?? user.totalPoints) 
@@ -249,6 +323,8 @@ export default function RecordsView() {
         maxStreak,
         qualifiersExactHits,
         qualifiersAnyHits,
+        knockoutQualifiersHits: knockoutQualifiersList.length,
+        knockoutQualifiersList,
         avgDistanceToOfficial: predictedMatchesCount > 0 ? parseFloat((totalDistance / predictedMatchesCount).toFixed(2)) : 999
       };
     });
@@ -310,6 +386,15 @@ export default function RecordsView() {
       });
   }, [computedRecords]);
 
+  const topKnockoutQualifiers = useMemo(() => {
+    return [...computedRecords]
+      .filter(u => u.knockoutQualifiersHits > 0)
+      .sort((a, b) => {
+        if (b.knockoutQualifiersHits !== a.knockoutQualifiersHits) return b.knockoutQualifiersHits - a.knockoutQualifiersHits;
+        return b.totalPoints - a.totalPoints;
+      });
+  }, [computedRecords]);
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-3">
@@ -318,6 +403,104 @@ export default function RecordsView() {
       </div>
     );
   }
+
+  const renderKnockoutRankList = (
+    title: string,
+    subtitle: string,
+    icon: React.ReactNode,
+    data: UserRecordStats[]
+  ) => {
+    return (
+      <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-4 backdrop-blur-sm shadow-xl flex flex-col h-full col-span-1 md:col-span-2 xl:col-span-2">
+        <div className="flex items-center gap-3 border-b border-slate-800/60 pb-3 mb-4">
+          <div className="p-2 rounded-xl bg-slate-800 border border-slate-700/50">
+            {icon}
+          </div>
+          <div>
+            <h3 className="font-bold text-white tracking-tight">{title}</h3>
+            <p className="text-[10px] text-slate-400">{subtitle}</p>
+          </div>
+        </div>
+
+        <div className="divide-y divide-slate-850 flex-1">
+          {data.map((user, idx) => {
+            const rank = idx + 1;
+            let rankBadge = null;
+
+            if (rank === 1) {
+              rankBadge = <Medal className="w-4 h-4 text-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.4)]" />;
+            } else if (rank === 2) {
+              rankBadge = <Medal className="w-4 h-4 text-slate-300 drop-shadow-[0_0_6px_rgba(203,213,225,0.4)]" />;
+            } else if (rank === 3) {
+              rankBadge = <Medal className="w-4 h-4 text-amber-600 drop-shadow-[0_0_6px_rgba(217,119,6,0.4)]" />;
+            } else {
+              rankBadge = <span className="text-[11px] font-mono text-slate-500 font-bold">{rank}</span>;
+            }
+
+            return (
+              <div key={user.uid} className="flex items-center justify-between py-3 hover:bg-slate-800/10 transition-colors px-1">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
+                  <div className="w-5 flex justify-center flex-shrink-0">
+                    {rankBadge}
+                  </div>
+                  <span className="text-xs text-slate-200 truncate font-semibold">
+                    {user.displayName}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-4 flex-shrink-0">
+                  <span className="text-sm font-black text-white font-mono">{user.knockoutQualifiersHits}</span>
+
+                  <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                    {user.knockoutQualifiersList.map((hit, hIdx) => {
+                      const flagUrl = getFlagUrl(hit.teamName);
+                      return (
+                        <div
+                          key={hIdx}
+                          title={`${hit.teamName}${hit.isUnique ? ' (¡Acierto Único!)' : ''}`}
+                          className={`relative group rounded-md p-0.5 border transition-all ${
+                            hit.isUnique
+                              ? 'border-amber-400 bg-amber-500/10 shadow-[0_0_10px_rgba(245,158,11,0.5)] scale-110'
+                              : 'border-slate-800 bg-slate-900/60'
+                          }`}
+                        >
+                          {flagUrl ? (
+                            <img
+                              src={flagUrl}
+                              alt={hit.teamName}
+                              className="w-6.5 h-4 object-cover rounded-sm"
+                            />
+                          ) : (
+                            <span className="text-[8px] font-bold px-1 font-mono uppercase bg-slate-950 text-slate-400 rounded">
+                              {hit.teamName.slice(0, 3)}
+                            </span>
+                          )}
+                          {hit.isUnique && (
+                            <span className="absolute -top-1 -right-1 flex h-1.5 w-1.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {user.knockoutQualifiersList.length === 0 && (
+                      <span className="text-[10px] text-slate-650 italic">Sin aciertos</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {data.length === 0 && (
+            <div className="py-8 text-center text-slate-500 text-xs">
+              Sin datos disponibles aún.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const renderRankList = (
     title: string,
@@ -487,6 +670,14 @@ export default function RecordsView() {
           (u) => u.qualifiersExactHits,
           "Equipos",
           "bg-fuchsia-950/30 text-fuchsia-400 border-fuchsia-500/20"
+        )}
+
+        {/* Top Clasificados Eliminatorias - SOLO ELIMINATORIAS */}
+        {activePhase !== 'grupos' && renderKnockoutRankList(
+          "Top Clasificados Eliminatorias",
+          "Mayor cantidad de aciertos de clasificados de la fase",
+          <Trophy className="w-5 h-5 text-amber-500 animate-pulse" />,
+          topKnockoutQualifiers
         )}
 
         {/* Top Cercanía (Anti-Batacazo) */}
