@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { Usuario, Partido } from '../../models/types';
-import { Trophy, Share2, Medal, Target, Award, Sparkles, Loader2 } from 'lucide-react';
+import { Trophy, Share2, Medal, Target, Award, Sparkles, Loader2, Calendar } from 'lucide-react';
 import { toTitleCase } from '../../utils/format';
 import { calculateMatchPoints } from '../../utils/scoring';
 
@@ -14,6 +14,8 @@ interface CumulativeUserStats {
   goalHits: number;
   outcomeHits: number;
   avgDistance: number;
+  lastMatchPoints: number;
+  playedLastMatch: boolean;
 }
 
 export default function PlayoffCumulative() {
@@ -83,6 +85,132 @@ export default function PlayoffCumulative() {
   // 'semis' / 'final' = Finales
   const playoffPhases = ['16avos', '8vos', '4tos', 'semis', 'final'];
 
+  // Obtener el último partido finalizado de playoffs
+  const lastFinishedMatch = useMemo(() => {
+    const playoffMatches = matches.filter(m => playoffPhases.includes(m.phase || ''));
+    const finished = playoffMatches
+      .filter(m => m.status === 'finished' && m.homeGoals !== null && m.awayGoals !== null)
+      .sort((a, b) => {
+        const timeA = a.kickoffTime?.toDate ? a.kickoffTime.toDate().getTime() : new Date(a.kickoffTime).getTime();
+        const timeB = b.kickoffTime?.toDate ? b.kickoffTime.toDate().getTime() : new Date(b.kickoffTime).getTime();
+        return timeA - timeB;
+      });
+    return finished[finished.length - 1] || null;
+  }, [matches]);
+
+  const shareTodaySummary = async () => {
+    if (computedUsers.length === 0) return;
+
+    try {
+      // 1. Obtener partidos finalizados
+      const finishedMatches = matches.filter(m => m.status === 'finished');
+      if (finishedMatches.length === 0) {
+        alert("No hay partidos finalizados para generar el resumen.");
+        return;
+      }
+
+      // Agrupar por fecha
+      const matchesByDate: Record<string, Partido[]> = {};
+      finishedMatches.forEach(m => {
+        const d = new Date(m.kickoffTime);
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (!matchesByDate[dateStr]) matchesByDate[dateStr] = [];
+        matchesByDate[dateStr].push(m);
+      });
+
+      const dates = Object.keys(matchesByDate).sort();
+      const latestDateStr = dates[dates.length - 1];
+      const targetMatches = matchesByDate[latestDateStr];
+
+      // 2. Calcular los puntos ganados hoy
+      const userTodayPoints: Record<string, number> = {};
+      users.forEach(u => {
+        userTodayPoints[u.uid] = 0;
+      });
+
+      targetMatches.forEach(match => {
+        users.forEach(user => {
+          const pred = predictions[user.uid]?.[match.id];
+          if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
+            const scoreResult = calculateMatchPoints(pred.homeGoals, pred.awayGoals, match.homeGoals, match.awayGoals, match.phase);
+            if (scoreResult.points > 0) {
+              userTodayPoints[user.uid] += scoreResult.points;
+            }
+          }
+        });
+      });
+
+      const sampleDate = new Date(targetMatches[0].kickoffTime);
+      const formattedDate = sampleDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+
+      let text = `📅 *Resumen de la Jornada (${formattedDate}) - Quiniela Mundial 2026* 📅\n\n`;
+      text += `⚽ *Partidos:* \n`;
+      targetMatches.forEach(m => {
+        text += `• ${m.homeTeam} ${m.homeGoals} - ${m.awayGoals} ${m.awayTeam}\n`;
+      });
+
+      text += `\n🔥 *Puntos Ganados Hoy (Aciertos):* \n`;
+      const sortedToday = Object.entries(userTodayPoints)
+        .map(([uid, pts]) => ({
+          user: users.find(u => u.uid === uid),
+          points: pts
+        }))
+        .filter(item => item.user && item.points > 0)
+        .sort((a, b) => b.points - a.points);
+
+      if (sortedToday.length === 0) {
+        text += `Ningún participante sumó puntos en esta jornada.\n`;
+      } else {
+        sortedToday.forEach((item, idx) => {
+          text += `${idx + 1}. *${item.user!.displayName.trim()}* : +${item.points} pts\n`;
+        });
+      }
+
+      // 3. Tabla General como la hemos venido viendo (ordenada por totalPoints global de todo el torneo)
+      text += `\n🏆 *Tabla General Acumulada (Todo el Torneo):* \n`;
+      const sortedGlobalUsers = [...users]
+        .filter(u => u.totalPoints !== undefined)
+        .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
+
+      sortedGlobalUsers.slice(0, 10).forEach((user, idx) => {
+        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
+        text += `${medal} *${user.displayName.trim()}* - ${user.totalPoints} pts\n`;
+      });
+
+      // 4. Los tres primeros de la ronda actual (Cuartos de final '8vos')
+      const currentRoundMatches = matches.filter(m => m.phase === '8vos');
+      const userRoundPoints = users.map(user => {
+        let pts = 0;
+        currentRoundMatches.forEach(match => {
+          if (match.status === 'finished' && match.homeGoals !== null && match.awayGoals !== null) {
+            const pred = predictions[user.uid]?.[match.id];
+            if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
+              pts += calculateMatchPoints(pred.homeGoals, pred.awayGoals, match.homeGoals, match.awayGoals, match.phase).points;
+            }
+          }
+        });
+        return {
+          user,
+          points: pts
+        };
+      }).sort((a, b) => b.points - a.points);
+
+      text += `\n⭐ *Top 3 de Cuartos de Final:* \n`;
+      userRoundPoints.slice(0, 3).forEach((item, idx) => {
+        const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
+        text += `${medal} *${item.user.displayName.trim()}* - ${item.points} pts\n`;
+      });
+
+      text += `\n¡Sigue y simula tus resultados aquí!\n${window.location.origin}`;
+
+      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+    } catch (err) {
+      console.error("Error al generar resumen:", err);
+      alert("Hubo un error al generar el resumen de la jornada.");
+    }
+  };
+
   // Calcular estadísticas de eliminatorias consolidadas
   const computedUsers = useMemo<CumulativeUserStats[]>(() => {
     const playoffMatches = matches.filter(m => playoffPhases.includes(m.phase || ''));
@@ -126,6 +254,18 @@ export default function PlayoffCumulative() {
         }
       });
 
+      let lastMatchPoints = 0;
+      let playedLastMatch = false;
+
+      if (lastFinishedMatch) {
+        const pred = userPreds[lastFinishedMatch.id];
+        if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
+          playedLastMatch = true;
+          const scoreResult = calculateMatchPoints(pred.homeGoals, pred.awayGoals, lastFinishedMatch.homeGoals, lastFinishedMatch.awayGoals, lastFinishedMatch.phase);
+          lastMatchPoints = scoreResult.points;
+        }
+      }
+
       return {
         uid: user.uid,
         displayName: user.displayName,
@@ -133,7 +273,9 @@ export default function PlayoffCumulative() {
         exactHits,
         goalHits,
         outcomeHits,
-        avgDistance: predictedMatchesCount > 0 ? parseFloat((totalDistance / predictedMatchesCount).toFixed(2)) : 999
+        avgDistance: predictedMatchesCount > 0 ? parseFloat((totalDistance / predictedMatchesCount).toFixed(2)) : 999,
+        lastMatchPoints,
+        playedLastMatch
       };
     });
 
@@ -283,14 +425,6 @@ export default function PlayoffCumulative() {
             </p>
           </div>
         </div>
-        
-        <button
-          onClick={shareOnWhatsApp}
-          className="flex items-center justify-center gap-2 text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 py-2.5 px-4 rounded-xl transition-all cursor-pointer hover:scale-[1.02] active:scale-95 shadow-md whitespace-nowrap self-stretch sm:self-auto"
-        >
-          <Share2 className="w-4 h-4" />
-          <span>Compartir Acumulado</span>
-        </button>
       </div>
 
       {/* Main Grid: Standings on Left, Records on Right */}
@@ -313,7 +447,7 @@ export default function PlayoffCumulative() {
             </div>
           </div>
 
-          <div className="divide-y divide-slate-700/30 overflow-y-auto max-h-[600px]">
+          <div className="divide-y divide-slate-700/30">
             {computedUsers.map((user, index) => {
               const rank = index + 1;
               let rankIcon = null;
@@ -345,11 +479,22 @@ export default function PlayoffCumulative() {
 
                   <div className="flex items-center gap-3.5">
                     {/* Points */}
-                    <div className="flex items-baseline gap-1 text-right">
-                      <span className={`text-lg font-black ${rank <= 3 ? rankColor : 'text-emerald-400'}`}>
-                        {user.playoffPoints}
-                      </span>
-                      <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">pts</span>
+                    <div className="flex items-center gap-2 text-right">
+                      <div className="flex items-baseline gap-1">
+                        <span className={`text-lg font-black ${rank <= 3 ? rankColor : 'text-emerald-400'}`}>
+                          {user.playoffPoints}
+                        </span>
+                        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">pts</span>
+                      </div>
+                      {user.playedLastMatch && (
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                          user.lastMatchPoints > 0
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-slate-800 text-slate-500 border border-slate-700/50'
+                        }`} title="Puntos obtenidos en el último partido de eliminatorias">
+                          +{user.lastMatchPoints}
+                        </span>
+                      )}
                     </div>
 
                     {/* AG Badge */}
@@ -372,6 +517,24 @@ export default function PlayoffCumulative() {
                 Aún no hay participantes registrados.
               </div>
             )}
+          </div>
+
+          {/* Compartir Resumen y Acumulado */}
+          <div className="bg-slate-900/60 p-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+            <button
+              onClick={shareTodaySummary}
+              className="w-full sm:flex-1 flex items-center justify-center gap-2 text-xs font-bold bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 py-2.5 px-4 rounded-xl transition-all cursor-pointer hover:scale-[1.02] active:scale-95 shadow-md"
+            >
+              <Calendar className="w-4 h-4" />
+              <span>Compartir Resumen del Día</span>
+            </button>
+            <button
+              onClick={shareOnWhatsApp}
+              className="w-full sm:flex-1 flex items-center justify-center gap-2 text-xs font-bold bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 py-2.5 px-4 rounded-xl transition-all cursor-pointer hover:scale-[1.02] active:scale-95 shadow-md"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>Compartir Tabla Acumulada</span>
+            </button>
           </div>
         </div>
 

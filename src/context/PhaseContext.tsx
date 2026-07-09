@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 
-type Phase = 'grupos' | '32avos' | '16avos' | '8vos' | '4tos' | 'semis' | 'final';
+type Phase = 'grupos' | '32avos' | '16avos' | '8vos' | '4tos' | 'semis' | 'final' | 'playoff_cumulative';
 
 interface PhaseContextType {
   activePhase: Phase;
@@ -18,7 +18,7 @@ export const PhaseProvider = ({ children }: { children: ReactNode }) => {
     { id: '32avos', label: '16avos de Final' },
     { id: '16avos', label: 'Octavos de Final' },
     { id: '8vos', label: 'Cuartos de Final' },
-    // Se irán añadiendo más conforme avancemos
+    { id: 'playoff_cumulative', label: 'Acumulado Eliminatorias' }
   ];
 
   return (

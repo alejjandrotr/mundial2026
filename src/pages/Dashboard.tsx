@@ -20,7 +20,7 @@ import { sha256, ADMIN_PASSWORD_HASH } from '../utils/crypto';
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
   const { activePhase, setActivePhase, availablePhases } = usePhase();
-  const [activeTab, setActiveTab] = useState<'live' | 'quiniela' | 'comparison' | 'admin' | 'records' | 'playoff_cumulative'>('quiniela');
+  const [activeTab, setActiveTab] = useState<'live' | 'quiniela' | 'comparison' | 'admin' | 'records'>('quiniela');
   const quinielaGroup = 'A';
 
   const [devUnlocked, setDevUnlocked] = useState(false);
@@ -134,113 +134,105 @@ export default function Dashboard() {
         </div>
 
         {/* Selector de Pestañas Principal */}
-        <div className="no-print flex bg-slate-900/60 border border-slate-800/70 p-1.5 rounded-2xl backdrop-blur-md max-w-4xl mb-8 gap-1 shadow-inner flex-wrap md:flex-nowrap">
-          <button
-            onClick={() => setActiveTab('quiniela')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[100px] ${
-              activeTab === 'quiniela'
-                ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-            }`}
-          >
-            <Gamepad2 className="w-4 h-4" />
-            Mi Quiniela
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('comparison')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[110px] ${
-              activeTab === 'comparison'
-                ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-            }`}
-          >
-            <Table className="w-4 h-4" />
-            Comparativa
-          </button>
+        {activePhase !== 'playoff_cumulative' && (
+          <div className="no-print flex bg-slate-900/60 border border-slate-800/70 p-1.5 rounded-2xl backdrop-blur-md max-w-3xl mb-8 gap-1 shadow-inner flex-wrap md:flex-nowrap">
+            <button
+              onClick={() => setActiveTab('quiniela')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[100px] ${
+                activeTab === 'quiniela'
+                  ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Gamepad2 className="w-4 h-4" />
+              Mi Quiniela
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('comparison')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[110px] ${
+                activeTab === 'comparison'
+                  ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Table className="w-4 h-4" />
+              Comparativa
+            </button>
 
-          <button
-            onClick={() => setActiveTab('live')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[110px] ${
-              activeTab === 'live'
-                ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-            }`}
-          >
-            <Trophy className="w-4 h-4" />
-            Resultados
-          </button>
+            <button
+              onClick={() => setActiveTab('live')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[110px] ${
+                activeTab === 'live'
+                  ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Trophy className="w-4 h-4" />
+              Resultados
+            </button>
 
-          <button
-            onClick={() => setActiveTab('playoff_cumulative')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[130px] ${
-              activeTab === 'playoff_cumulative'
-                ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-            }`}
-          >
-            <Trophy className="w-4 h-4 text-amber-400" />
-            Acumulado Eliminatorias
-          </button>
+            <button
+              onClick={() => setActiveTab('records')}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[90px] ${
+                activeTab === 'records'
+                  ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Award className="w-4 h-4" />
+              Records
+            </button>
 
-          <button
-            onClick={() => setActiveTab('records')}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[90px] ${
-              activeTab === 'records'
-                ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-            }`}
-          >
-            <Award className="w-4 h-4" />
-            Records
-          </button>
-
-          <button
-            onClick={() => setActiveTab('admin')}
-            className={`flex flex-1 items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[90px] ${
-              activeTab === 'admin'
-                ? 'bg-worldcup-green text-slate-950 shadow-[0_0_15px_rgba(0,245,118,0.35)] font-black scale-[1.02]'
-                : 'text-worldcup-green hover:bg-worldcup-green/5 border border-transparent hover:border-worldcup-green/10'
-            }`}
-          >
-            <Settings className="w-4 h-4" />
-            Admin
-          </button>
-        </div>
-
-        {/* Contenido de la pestaña activa */}
-        {activeTab === 'quiniela' && (
-          <QuinielaForm initialGroup={quinielaGroup} />
-        )}
-
-        {activeTab === 'comparison' && (
-          <ComparisonGrid />
-        )}
-
-        {activeTab === 'records' && (
-          <RecordsView />
-        )}
-
-        {activeTab === 'playoff_cumulative' && (
-          <PlayoffCumulative />
-        )}
-
-        {activeTab === 'live' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fadeIn">
-            {/* Columna Izquierda: Tabla de Posiciones */}
-            <div className="lg:col-span-5 xl:col-span-4">
-              <Leaderboard />
-            </div>
-
-            {/* Columna Derecha: Partidos Reales */}
-            <div className="lg:col-span-7 xl:col-span-8">
-              <MatchList />
-            </div>
+            <button
+              onClick={() => setActiveTab('admin')}
+              className={`flex flex-1 items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[90px] ${
+                activeTab === 'admin'
+                  ? 'bg-worldcup-green text-slate-950 shadow-[0_0_15px_rgba(0,245,118,0.35)] font-black scale-[1.02]'
+                  : 'text-worldcup-green hover:bg-worldcup-green/5 border border-transparent hover:border-worldcup-green/10'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              Admin
+            </button>
           </div>
         )}
 
-        {activeTab === 'admin' && (
-          <AdminPanel />
+        {/* Contenido de la pestaña activa */}
+        {activePhase === 'playoff_cumulative' ? (
+          <PlayoffCumulative />
+        ) : (
+          <>
+            {activeTab === 'quiniela' && (
+              <QuinielaForm initialGroup={quinielaGroup} />
+            )}
+
+            {activeTab === 'comparison' && (
+              <ComparisonGrid />
+            )}
+
+            {activeTab === 'records' && (
+              <RecordsView />
+            )}
+
+            {activeTab === 'live' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fadeIn">
+                {/* Columna Izquierda: Tabla de Posiciones */}
+                <div className="lg:col-span-5 xl:col-span-4">
+                  <Leaderboard />
+                </div>
+
+                {/* Columna Derecha: Partidos Reales */}
+                <div className="lg:col-span-7 xl:col-span-8">
+                  <MatchList />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'admin' && (
+              <AdminPanel />
+            )}
+          </>
         )}
 
         {/* Zona de Desarrollo Protegida */}
