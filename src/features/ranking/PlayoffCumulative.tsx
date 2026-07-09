@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../../config/firebase';
 import type { Usuario, Partido } from '../../models/types';
-import { Trophy, Share2, Info, Medal, Target, Award, Sparkles, Loader2, Minus, ArrowUp, ArrowDown } from 'lucide-react';
+import { Trophy, Share2, Medal, Target, Award, Sparkles, Loader2 } from 'lucide-react';
 import { toTitleCase } from '../../utils/format';
 import { calculateMatchPoints } from '../../utils/scoring';
 
@@ -21,7 +21,6 @@ export default function PlayoffCumulative() {
   const [matches, setMatches] = useState<Partido[]>([]);
   const [predictions, setPredictions] = useState<Record<string, Record<string, { homeGoals: number | null; awayGoals: number | null }>>>({});
   const [loading, setLoading] = useState(true);
-  const [showHelp, setShowHelp] = useState(false);
 
   useEffect(() => {
     // 1. Escuchar partidos
