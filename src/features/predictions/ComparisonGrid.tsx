@@ -389,9 +389,11 @@ export default function ComparisonGrid() {
 
                           let cellBg = isSelf ? 'bg-emerald-50/20' : '';
                           if (hasRealResult) {
-                            if (scoreResult.points === 3) {
+                            const isExact = predH === realH && predV === realV;
+                            const isOutcome = scoreResult.points > 0 && !isExact;
+                            if (isExact) {
                               cellBg = 'bg-yellow-100 font-black';
-                            } else if (scoreResult.points === 2) {
+                            } else if (isOutcome) {
                               cellBg = 'bg-emerald-100';
                             }
                           }
@@ -515,10 +517,13 @@ export default function ComparisonGrid() {
                           cellClass += " bg-emerald-500/[0.02] border-x border-x-emerald-500/15";
                         }
                         
+                        const isExact = hasRealResult && predH === realH && predV === realV;
+                        const isOutcome = hasRealResult && scoreResult.points > 0 && !isExact;
+
                         if (hasRealResult) {
-                          if (scoreResult.points === 3) {
+                          if (isExact) {
                             cellClass += " bg-yellow-500/[0.04] text-yellow-300 border-l border-yellow-500/20 shadow-[inset_0_0_10px_rgba(234,179,8,0.05)] border-y border-y-yellow-500/10";
-                          } else if (scoreResult.points === 2) {
+                          } else if (isOutcome) {
                             cellClass += " bg-emerald-500/[0.03] text-emerald-300 border-l border-emerald-500/20";
                           }
                         }
@@ -540,9 +545,9 @@ export default function ComparisonGrid() {
                               {/* Points tag overlay */}
                               {hasRealResult && (
                                 <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono mt-0.5 ${
-                                  scoreResult.points === 3
+                                  isExact
                                     ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                                    : scoreResult.points === 2
+                                    : isOutcome
                                     ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                                     : scoreResult.points === 1
                                     ? 'bg-slate-800 text-emerald-400 border border-slate-700/50'

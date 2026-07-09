@@ -419,11 +419,13 @@ export default function WhatIfSimulator() {
                           if (isOwnPrediction) {
                             cellClass += " bg-indigo-500/[0.02] border-x border-x-indigo-500/15";
                           }
-                          
+                          const isExact = hasSimResult && predH === simH && predV === simV;
+                          const isOutcome = hasSimResult && scoreResult.points > 0 && !isExact;
+
                           if (hasSimResult && !isHidden) {
-                            if (scoreResult.points === 3) {
+                            if (isExact) {
                               cellClass += " bg-yellow-500/[0.04] text-yellow-300 border-l border-yellow-500/20 shadow-[inset_0_0_10px_rgba(234,179,8,0.05)] border-y border-y-yellow-500/10";
-                            } else if (scoreResult.points === 2) {
+                            } else if (isOutcome) {
                               cellClass += " bg-emerald-500/[0.03] text-emerald-300 border-l border-emerald-500/20";
                             } else if (isSimulated) {
                                cellClass += " opacity-60";
@@ -457,18 +459,18 @@ export default function WhatIfSimulator() {
                                 </div>
 
                                 {hasSimResult && (
-                                  <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono mt-0.5 ${
-                                    scoreResult.points === 3
-                                      ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
-                                      : scoreResult.points === 2
-                                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                      : scoreResult.points === 1
-                                      ? 'bg-slate-800 text-emerald-400 border border-slate-700/50'
-                                      : 'bg-slate-900 text-slate-500 border border-slate-850'
-                                  }`}>
-                                    +{scoreResult.points} pts
-                                  </span>
-                                )}
+                                   <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono mt-0.5 ${
+                                     isExact
+                                       ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                                       : isOutcome
+                                       ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                       : scoreResult.points === 1
+                                       ? 'bg-slate-800 text-emerald-400 border border-slate-700/50'
+                                       : 'bg-slate-900 text-slate-500 border border-slate-850'
+                                   }`}>
+                                     +{scoreResult.points} pts
+                                   </span>
+                                 )}
                               </div>
                             </td>
                           );

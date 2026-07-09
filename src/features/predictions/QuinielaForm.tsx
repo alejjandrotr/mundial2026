@@ -438,6 +438,9 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
                 ? calculateMatchPoints(predHomeNum, predAwayNum, match.homeGoals, match.awayGoals, match.phase)
                 : null;
 
+              const isExact = scoreResult !== null && predHomeNum === match.homeGoals && predAwayNum === match.awayGoals;
+              const isOutcome = scoreResult !== null && scoreResult.points > 0 && !isExact;
+
               // Identificar ganador real para mostrar en el detalle
               let realWinnerLabel = '';
               if (isPlayed) {
@@ -454,9 +457,9 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
                 <div
                   key={match.id}
                   className={`bg-slate-800/30 border rounded-2xl p-4 flex flex-col items-center justify-between gap-4 transition-all duration-200 ${
-                    scoreResult?.points === 3 
+                    isExact 
                       ? 'border-yellow-500/50 bg-yellow-500/[0.02]' 
-                      : scoreResult?.points === 2 
+                      : isOutcome 
                       ? 'border-emerald-500/40 bg-emerald-500/[0.01]' 
                       : 'border-slate-700/40 hover:border-slate-600/50'
                   }`}
@@ -480,15 +483,15 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
                     {/* Badge de Puntos Obtenidos */}
                     {scoreResult !== null && (
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full font-mono flex items-center gap-1 ${
-                        scoreResult.points === 3
+                        isExact
                           ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 animate-pulse'
-                          : scoreResult.points === 2
+                          : isOutcome
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                           : scoreResult.points === 1
                           ? 'bg-slate-800 text-emerald-400 border border-slate-700/60'
                           : 'bg-slate-900 text-slate-500 border border-slate-850'
                       }`}>
-                        {scoreResult.points === 3 && <Star className="w-3 h-3 fill-yellow-500" />}
+                        {isExact && <Star className="w-3 h-3 fill-yellow-500" />}
                         +{scoreResult.points} pts
                       </span>
                     )}
