@@ -11,11 +11,13 @@ interface PhaseContextType {
 const PhaseContext = createContext<PhaseContextType | undefined>(undefined);
 
 export const PhaseProvider = ({ children }: { children: ReactNode }) => {
-  const [activePhase, setActivePhase] = useState<Phase>('32avos'); // Empezamos en 32avos por defecto ahora
+  const [activePhase, setActivePhase] = useState<Phase>('8vos'); // Empezamos en 8vos por defecto ahora
 
   const availablePhases: { id: Phase; label: string }[] = [
     { id: 'grupos', label: 'Fase de Grupos' },
     { id: '32avos', label: '16avos de Final' },
+    { id: '16avos', label: 'Octavos de Final' },
+    { id: '8vos', label: 'Cuartos de Final' },
     // Se irán añadiendo más conforme avancemos
   ];
 

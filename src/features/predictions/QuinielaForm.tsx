@@ -51,6 +51,15 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
     return isFormLockedForPhase(activePhase);
   }, [activePhase]);
 
+  const isMatchFieldDisabled = (matchId: string): boolean => {
+    if (isLocked) return true;
+    if (activePhase === '16avos' && matchId === 'match_16_01') {
+      const lockTime = new Date('2026-07-04T13:20:00-04:00').getTime();
+      return Date.now() >= lockTime;
+    }
+    return false;
+  };
+
 
   const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
 
@@ -100,7 +109,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
 
   // Manejar el cambio en los inputs de marcador
   const handleScoreChange = (matchId: string, side: 'homeGoals' | 'awayGoals', value: string) => {
-    if (isLocked) return;
+    if (isMatchFieldDisabled(matchId)) return;
     if (value !== '' && !/^\d+$/.test(value)) return;
     
     setPredictions((prev) => ({
@@ -117,7 +126,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
   };
 
   const handleWinnerChange = (matchId: string, winner: 'home' | 'away') => {
-    if (isLocked) return;
+    if (isMatchFieldDisabled(matchId)) return;
     setPredictions((prev) => ({
       ...prev,
       [matchId]: {
@@ -264,6 +273,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
         const awayGVal = pred.awayGoals !== '' ? parseInt(pred.awayGoals, 10) : null;
 
         if (homeGVal !== null || awayGVal !== null) {
+          if (isMatchFieldDisabled(matchId)) return;
           const docId = `prediction_${currentUser.uid}_${matchId}`;
           const docRef = doc(predRef, docId);
 
@@ -318,8 +328,16 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
   // Limpiar todas las predicciones del estado local
   const handleClearAll = () => {
     if (isLocked) return;
-    if (confirm('¿Estás seguro de que deseas limpiar todas tus predicciones? Esto borrará tus respuestas locales (debes presionar "Guardar mi Quiniela" para aplicar los cambios en la base de datos).')) {
-      setPredictions({});
+    if (confirm('¿Estás seguro de que deseas limpiar tus predicciones no bloqueadas? Esto borrará tus respuestas locales (debes presionar "Guardar mi Quiniela" para aplicar los cambios en la base de datos).')) {
+      setPredictions((prev) => {
+        const next: Record<string, PredictionState> = {};
+        Object.entries(prev).forEach(([matchId, pred]) => {
+          if (isMatchFieldDisabled(matchId)) {
+            next[matchId] = pred;
+          }
+        });
+        return next;
+      });
       setSaveStatus('idle');
     }
   };
@@ -357,6 +375,16 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
           <div className="text-xs">
             <h4 className="font-bold text-sm text-white mb-0.5">🔒 Predicciones Cerradas</h4>
             <p className="text-slate-300 leading-relaxed">La fecha límite para realizar modificaciones ha vencido (<strong>{new Date(getPhaseLockTimestamp(activePhase)).toLocaleString('es-ES', { dateStyle: 'long', timeStyle: 'short' })}</strong>). Actualmente te encuentras en modo lectura y tus pronósticos están protegidos.</p>
+          </div>
+        </div>
+      )}
+
+      {!isLocked && activePhase === '16avos' && Date.now() >= new Date('2026-07-04T13:20:00-04:00').getTime() && (
+        <div className="bg-amber-500/10 border border-amber-500/25 rounded-2xl p-4 flex items-start gap-3 text-amber-400 backdrop-blur-sm animate-fadeIn">
+          <Lock className="w-5 h-5 flex-shrink-0 mt-0.5 animate-pulse text-amber-400" />
+          <div className="text-xs">
+            <h4 className="font-bold text-sm text-white mb-0.5">🔒 Primer Partido Bloqueado</h4>
+            <p className="text-slate-300 leading-relaxed">El primer partido (Canadá vs Marruecos) se ha bloqueado ya que el plazo límite especial (1:20 PM de hoy) ha vencido. Puedes seguir completando y editando tus predicciones para el resto de los partidos hasta las 5:00 PM de hoy.</p>
           </div>
         </div>
       )}
@@ -487,7 +515,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
                           value={pred.homeGoals}
                           onFocus={(e) => e.target.select()}
                           onChange={(e) => handleScoreChange(match.id, 'homeGoals', e.target.value)}
-                          disabled={isLocked}
+                          disabled={isMatchFieldDisabled(match.id)}
                           className={`w-12 h-12 bg-slate-900 border rounded-xl text-center text-lg font-black outline-none transition-all shadow-inner ${
                             scoreResult?.matchedHome
                               ? 'border-emerald-500 text-emerald-400 ring-2 ring-emerald-500/20'
@@ -503,7 +531,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
                           value={pred.awayGoals}
                           onFocus={(e) => e.target.select()}
                           onChange={(e) => handleScoreChange(match.id, 'awayGoals', e.target.value)}
-                          disabled={isLocked}
+                          disabled={isMatchFieldDisabled(match.id)}
                           className={`w-12 h-12 bg-slate-900 border rounded-xl text-center text-lg font-black outline-none transition-all shadow-inner ${
                             scoreResult?.matchedAway
                               ? 'border-emerald-500 text-emerald-400 ring-2 ring-emerald-500/20'
@@ -535,7 +563,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
                               name={`winner-${match.id}`} 
                               checked={pred.winner === 'home'}
                               onChange={() => handleWinnerChange(match.id, 'home')}
-                              disabled={isLocked}
+                              disabled={isMatchFieldDisabled(match.id)}
                               className="accent-emerald-500 w-3.5 h-3.5"
                             />
                             <span className={`text-xs font-bold transition-colors ${pred.winner === 'home' ? 'text-emerald-400' : 'text-slate-400'}`}>
@@ -549,7 +577,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
                               name={`winner-${match.id}`} 
                               checked={pred.winner === 'away'}
                               onChange={() => handleWinnerChange(match.id, 'away')}
-                              disabled={isLocked}
+                              disabled={isMatchFieldDisabled(match.id)}
                               className="accent-emerald-500 w-3.5 h-3.5"
                             />
                             <span className={`text-xs font-bold transition-colors ${pred.winner === 'away' ? 'text-emerald-400' : 'text-slate-400'}`}>
@@ -594,7 +622,12 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
           {isLocked ? (
             <div className="flex items-center gap-2 text-red-400 text-xs font-bold bg-red-500/10 px-3 py-1.5 rounded-lg border border-red-500/20">
               <Lock className="w-4 h-4 text-red-400 animate-pulse" />
-              <span className="text-red-400 font-black">Predicciones Cerradas (Límite Excedido)</span>
+              <span className="text-red-400 font-black">Predicciones Cerradas</span>
+            </div>
+          ) : activePhase === '16avos' && Date.now() >= new Date('2026-07-04T13:20:00-04:00').getTime() ? (
+            <div className="flex items-center gap-2 text-amber-400 text-xs font-bold bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20 animate-fadeIn">
+              <Lock className="w-4 h-4 text-amber-400 animate-pulse" />
+              <span className="text-amber-400 font-black">1 Partido Bloqueado</span>
             </div>
           ) : saveStatus === 'idle' ? (
             <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold">

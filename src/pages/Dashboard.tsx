@@ -12,6 +12,8 @@ import RecordsView from '../features/ranking/RecordsView';
 import { seedMockMatches, simulateRealScores } from '../utils/seed';
 import { migrateDataToPhaseStats } from '../utils/migrateGroups';
 import { seed32avosMatches } from '../utils/seed32avos';
+import { seed16avosMatches } from '../utils/seed16avos';
+import { seed8vosMatches } from '../utils/seed8vos';
 import { sha256, ADMIN_PASSWORD_HASH } from '../utils/crypto';
 
 export default function Dashboard() {
@@ -61,6 +63,20 @@ export default function Dashboard() {
     if (confirm('¿Estás seguro de inyectar los partidos de 16avos de final?')) {
       await seed32avosMatches();
       alert('¡Partidos de 16avos inyectados con éxito! Refresca para ver los cambios.');
+    }
+  };
+
+  const handleSeed16 = async () => {
+    if (confirm('¿Estás seguro de inyectar los partidos de Octavos de final?')) {
+      await seed16avosMatches();
+      alert('¡Partidos de Octavos inyectados con éxito! Refresca para ver los cambios.');
+    }
+  };
+
+  const handleSeed8 = async () => {
+    if (confirm('¿Estás seguro de inyectar los partidos de Cuartos de final?')) {
+      await seed8vosMatches();
+      alert('¡Partidos de Cuartos inyectados con éxito! Refresca para ver los cambios.');
     }
   };
 
@@ -285,7 +301,7 @@ export default function Dashboard() {
                 </div>
 
                 <div className="space-y-2 pt-2 border-t border-slate-800/60">
-                  <p className="text-xs text-slate-400 font-medium">3. Scripts de Fase 2 (16avos):</p>
+                  <p className="text-xs text-slate-400 font-medium">3. Scripts de Fase 2 (16avos - 32 equipos):</p>
                   <button
                     onClick={handleMigrate}
                     className="flex items-center gap-2 text-xs font-bold bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 px-4 py-2.5 rounded-xl transition-all w-full cursor-pointer"
@@ -298,7 +314,29 @@ export default function Dashboard() {
                     className="flex items-center gap-2 text-xs font-bold bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 px-4 py-2.5 rounded-xl transition-all w-full cursor-pointer"
                   >
                     <Database className="w-4 h-4 text-purple-400" />
-                    Cargar 16 Partidos (16avos)
+                    Cargar 16 Partidos (16avos de Final)
+                  </button>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-800/60">
+                  <p className="text-xs text-slate-400 font-medium">4. Scripts de Fase 3 (Octavos - 16 equipos):</p>
+                  <button
+                    onClick={handleSeed16}
+                    className="flex items-center gap-2 text-xs font-bold bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 px-4 py-2.5 rounded-xl transition-all w-full cursor-pointer"
+                  >
+                    <Database className="w-4 h-4 text-purple-400" />
+                    Cargar 8 Partidos (Octavos de Final)
+                  </button>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-800/60">
+                  <p className="text-xs text-slate-400 font-medium">5. Scripts de Fase 4 (Cuartos - 8 equipos):</p>
+                  <button
+                    onClick={handleSeed8}
+                    className="flex items-center gap-2 text-xs font-bold bg-slate-800 hover:bg-slate-700/80 border border-slate-700/60 text-slate-300 px-4 py-2.5 rounded-xl transition-all w-full cursor-pointer"
+                  >
+                    <Database className="w-4 h-4 text-purple-400" />
+                    Cargar 4 Partidos (Cuartos de Final)
                   </button>
                 </div>
               </div>

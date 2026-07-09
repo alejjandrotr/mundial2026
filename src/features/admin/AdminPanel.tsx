@@ -379,7 +379,7 @@ export default function AdminPanel() {
                 >
                   {matches.map((m) => (
                     <option key={m.id} value={m.id}>
-                      [{m.status === 'finished' ? 'Finalizado' : m.status === 'in_progress' ? 'En Vivo' : 'Pendiente'}] • Fase: {m.phase === '32avos' ? '16avos' : (m.phase || 'grupos')} • {m.homeTeam} vs {m.awayTeam}
+                      [{m.status === 'finished' ? 'Finalizado' : m.status === 'in_progress' ? 'En Vivo' : 'Pendiente'}] • Fase: {m.phase === '32avos' ? '16avos' : m.phase === '16avos' ? 'Octavos' : m.phase === '8vos' ? 'Cuartos' : (m.phase || 'grupos')} • {m.homeTeam} vs {m.awayTeam}
                     </option>
                   ))}
                 </select>
@@ -617,7 +617,7 @@ export default function AdminPanel() {
                 >
                   <div className="flex items-center gap-3">
                     <span className="bg-slate-800 text-slate-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase">
-                      {m.phase === '32avos' ? '16avos' : (m.phase || 'G' + m.group)}
+                      {m.phase === '32avos' ? '16avos' : m.phase === '16avos' ? 'Octavos' : m.phase === '8vos' ? 'Cuartos' : (m.phase || 'G' + m.group)}
                     </span>
                     <span className="font-extrabold text-xs text-white">
                       {m.homeTeam} vs {m.awayTeam}
