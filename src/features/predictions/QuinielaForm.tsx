@@ -290,7 +290,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
           // Calcular puntos ganados en tiempo real si el partido real ya se jugó
           const match = matches.find((m) => m.id === matchId);
           if (match && (match.status === 'finished' || match.status === 'in_progress') && (match.phase || 'grupos') === activePhase) {
-            const scoreResult = calculateMatchPoints(homeGVal, awayGVal, match.homeGoals, match.awayGoals);
+            const scoreResult = calculateMatchPoints(homeGVal, awayGVal, match.homeGoals, match.awayGoals, match.phase);
             userAccumulatedPoints += scoreResult.points;
           }
         }
@@ -435,7 +435,7 @@ export default function QuinielaForm({ initialGroup = 'A' }: QuinielaFormProps) 
 
               // Calcular los puntos que gana el usuario en este partido
               const scoreResult = isPlayed && predHomeNum !== null && predAwayNum !== null
-                ? calculateMatchPoints(predHomeNum, predAwayNum, match.homeGoals, match.awayGoals)
+                ? calculateMatchPoints(predHomeNum, predAwayNum, match.homeGoals, match.awayGoals, match.phase)
                 : null;
 
               // Identificar ganador real para mostrar en el detalle

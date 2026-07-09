@@ -17,7 +17,8 @@ export function calculateMatchPoints(
   predHome: number | null | undefined,
   predAway: number | null | undefined,
   realHome: number | null | undefined,
-  realAway: number | null | undefined
+  realAway: number | null | undefined,
+  phase?: string
 ): ScorePointsResult {
   // Si no hay predicción o no hay resultado real cargado, no hay puntos aún
   if (
@@ -29,10 +30,8 @@ export function calculateMatchPoints(
     return { points: 0, matchedHome: false, matchedAway: false };
   }
 
-  // 1. Acierto Exacto (3 Puntos)
-  if (predHome === realHome && predAway === realAway) {
-    return { points: 3, matchedHome: true, matchedAway: true };
-  }
+  // 1. Acierto Exacto
+  const matchedExact = predHome === realHome && predAway === realAway;
 
   // Calcular tendencias/resultados (Ganador Local, Ganador Visitante, Empate)
   const predOutcome = predHome > predAway ? 'home' : predHome < predAway ? 'away' : 'draw';
@@ -41,8 +40,26 @@ export function calculateMatchPoints(
   const matchedHome = predHome === realHome;
   const matchedAway = predAway === realAway;
 
-  // 2. Acierto de Tendencia (2 Puntos)
-  if (predOutcome === realOutcome) {
+  const matchedOutcome = predOutcome === realOutcome;
+
+  // Reglas especiales para Cuartos de Final (fase '8vos')
+  if (phase === '8vos') {
+    if (matchedExact) {
+      return { points: 4.5, matchedHome: true, matchedAway: true };
+    }
+    if (matchedOutcome) {
+      return { points: 3, matchedHome, matchedAway };
+    }
+    return { points: 0, matchedHome, matchedAway };
+  }
+
+  // Reglas estándar del torneo
+  if (matchedExact) {
+    return { points: 3, matchedHome: true, matchedAway: true };
+  }
+
+  // 2. Acierto de Tendencia
+  if (matchedOutcome) {
     return { points: 2, matchedHome, matchedAway };
   }
 

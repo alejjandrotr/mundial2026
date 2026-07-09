@@ -384,7 +384,7 @@ export default function ComparisonGrid() {
                           const predV = pred.awayGoals;
 
                           const scoreResult = hasRealResult
-                            ? calculateMatchPoints(predH, predV, realH, realV)
+                            ? calculateMatchPoints(predH, predV, realH, realV, match.phase)
                             : { points: 0, matchedHome: false, matchedAway: false };
 
                           let cellBg = isSelf ? 'bg-emerald-50/20' : '';
@@ -507,7 +507,7 @@ export default function ComparisonGrid() {
 
                         // Calcular puntos si hay resultado oficial
                         const scoreResult = hasRealResult
-                          ? calculateMatchPoints(predH, predV, realH, realV)
+                          ? calculateMatchPoints(predH, predV, realH, realV, match.phase)
                           : { points: 0, matchedHome: false, matchedAway: false };
 
                         let cellClass = "border-l border-slate-800/60 text-center py-3 px-4 font-semibold text-slate-300";

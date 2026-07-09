@@ -9,6 +9,7 @@ import ComparisonGrid from '../features/predictions/ComparisonGrid';
 import AdminPanel from '../features/admin/AdminPanel';
 import DangerZone from '../features/admin/DangerZone';
 import RecordsView from '../features/ranking/RecordsView';
+import PlayoffCumulative from '../features/ranking/PlayoffCumulative';
 import { seedMockMatches, simulateRealScores } from '../utils/seed';
 import { migrateDataToPhaseStats } from '../utils/migrateGroups';
 import { seed32avosMatches } from '../utils/seed32avos';
@@ -19,7 +20,7 @@ import { sha256, ADMIN_PASSWORD_HASH } from '../utils/crypto';
 export default function Dashboard() {
   const { currentUser, logout } = useAuth();
   const { activePhase, setActivePhase, availablePhases } = usePhase();
-  const [activeTab, setActiveTab] = useState<'live' | 'quiniela' | 'comparison' | 'admin' | 'records'>('quiniela');
+  const [activeTab, setActiveTab] = useState<'live' | 'quiniela' | 'comparison' | 'admin' | 'records' | 'playoff_cumulative'>('quiniela');
   const quinielaGroup = 'A';
 
   const [devUnlocked, setDevUnlocked] = useState(false);
@@ -133,7 +134,7 @@ export default function Dashboard() {
         </div>
 
         {/* Selector de Pestañas Principal */}
-        <div className="no-print flex bg-slate-900/60 border border-slate-800/70 p-1.5 rounded-2xl backdrop-blur-md max-w-3xl mb-8 gap-1 shadow-inner flex-wrap md:flex-nowrap">
+        <div className="no-print flex bg-slate-900/60 border border-slate-800/70 p-1.5 rounded-2xl backdrop-blur-md max-w-4xl mb-8 gap-1 shadow-inner flex-wrap md:flex-nowrap">
           <button
             onClick={() => setActiveTab('quiniela')}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[100px] ${
@@ -170,7 +171,17 @@ export default function Dashboard() {
             Resultados
           </button>
 
-
+          <button
+            onClick={() => setActiveTab('playoff_cumulative')}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 px-3 rounded-xl text-xs sm:text-sm font-bold transition-all min-w-[130px] ${
+              activeTab === 'playoff_cumulative'
+                ? 'bg-worldcup-gradient text-white shadow-[0_0_20px_rgba(114,9,183,0.35)] scale-[1.02]'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+            }`}
+          >
+            <Trophy className="w-4 h-4 text-amber-400" />
+            Acumulado Eliminatorias
+          </button>
 
           <button
             onClick={() => setActiveTab('records')}
@@ -208,6 +219,10 @@ export default function Dashboard() {
 
         {activeTab === 'records' && (
           <RecordsView />
+        )}
+
+        {activeTab === 'playoff_cumulative' && (
+          <PlayoffCumulative />
         )}
 
         {activeTab === 'live' && (

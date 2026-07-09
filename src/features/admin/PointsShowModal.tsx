@@ -54,7 +54,7 @@ export default function PointsShowModal({
       const predHome = pred && pred.homeGoals !== null ? pred.homeGoals : null;
       const predAway = pred && pred.awayGoals !== null ? pred.awayGoals : null;
       
-      const scoreResult = calculateMatchPoints(predHome, predAway, officialHomeGoals, officialAwayGoals);
+      const scoreResult = calculateMatchPoints(predHome, predAway, officialHomeGoals, officialAwayGoals, match.phase);
       const matchPhase = match.phase || 'grupos';
       const prevPhasePoints = user.phaseStats?.[matchPhase]?.totalPoints || 0;
       const prevGlobalPoints = user.totalPoints || 0;

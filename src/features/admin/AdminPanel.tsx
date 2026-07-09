@@ -283,7 +283,7 @@ export default function AdminPanel() {
         const userPreds = predictions[user.uid] || {};
         const pred = userPreds[match.id];
         if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
-          const scoreResult = calculateMatchPoints(pred.homeGoals, pred.awayGoals, match.homeGoals, match.awayGoals);
+          const scoreResult = calculateMatchPoints(pred.homeGoals, pred.awayGoals, match.homeGoals, match.awayGoals, match.phase);
           const pointsEarned = scoreResult.points;
           if (pointsEarned > 0) {
             const userRef = doc(db, 'usuarios', user.uid);

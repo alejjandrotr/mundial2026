@@ -44,7 +44,8 @@ export function generateBarChartRaceCSV(
       if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
         const { points, matchedHome, matchedAway } = calculateMatchPoints(
           pred.homeGoals, pred.awayGoals,
-          match.homeGoals, match.awayGoals
+          match.homeGoals, match.awayGoals,
+          match.phase
         );
         
         let matchPoints = points;

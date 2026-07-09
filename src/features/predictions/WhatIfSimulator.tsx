@@ -181,7 +181,7 @@ export default function WhatIfSimulator() {
           const pred = userPreds[sm.id];
           
           if (pred && pred.homeGoals !== null && pred.awayGoals !== null) {
-            const result = calculateMatchPoints(pred.homeGoals, pred.awayGoals, homeG, awayG);
+            const result = calculateMatchPoints(pred.homeGoals, pred.awayGoals, homeG, awayG, originalMatch.phase);
             stats[user.uid].simPoints += result.points;
             if (pred.homeGoals === homeG && pred.awayGoals === awayG) {
               stats[user.uid].simExactHits += 1;
@@ -411,9 +411,8 @@ export default function WhatIfSimulator() {
                           const isOwnPrediction = currentUser && user.uid === currentUser.uid;
                           const isHidden = isBeforeRevealDate && !isOwnPrediction && currentUser?.role !== 'admin';
 
-                          // Calcular puntos en base a la simulación
                           const scoreResult = hasSimResult
-                            ? calculateMatchPoints(predH, predV, simH, simV)
+                            ? calculateMatchPoints(predH, predV, simH, simV, match.phase)
                             : { points: 0, matchedHome: false, matchedAway: false };
 
                           let cellClass = "border-l border-slate-800/60 text-center py-3 px-4 font-semibold text-slate-300 transition-all";
